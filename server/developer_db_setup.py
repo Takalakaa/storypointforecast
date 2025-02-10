@@ -9,61 +9,35 @@ def init_developer_skills():
         mongo_client = pymongo.MongoClient(utils.connection_string)
         db = mongo_client["db"]
 
-        # Check if collection exists, if it does, don't recreate
-        if "DeveloperSkills" not in db.list_collection_names():
-            db.create_collection("DeveloperSkills")
-            print("DeveloperSkills collection created")
+        # Drop collection if it exists
+        if "developerSkills" in db.list_collection_names():
+            db.developerSkills.drop()
+            print("developerSkills collection dropped")
 
-            # Example initial documents
-            sample_developers = [
-                {
-                    "name": "John Doe",
-                    "Python": 4,
-                    "JavaScript": 3,
-                    "MongoDB": 2
-                },
-                {
-                    "name": "Jane Smith",
-                    "Java": 5,
-                    "Python": 2,
-                    "AWS": 4
-                }
-            ]
+        # Create new collection
+        db.create_collection("developerSkills")
+        print("developerSkills collection created")
 
-            # Insert sample data
-            db.DeveloperSkills.insert_many(sample_developers)
-            print("Sample developers inserted")
+        # Example initial documents with lowercase skills
+        sample_developers = [
+            {
+                "name": "John Doe",
+                "python": 4,
+                "javascript": 3,
+                "mongodb": 2
+            },
+            {
+                "name": "Jane Smith",
+                "java": 5,
+                "python": 2,
+                "aws": 4
+            }
+        ]
+
+        # Insert sample data
+        db.developerSkills.insert_many(sample_developers)
+        print("Sample developers inserted")
 
         return "Initialization complete"
     except Exception as e:
         return f"Error during initialization: {str(e)}"
-
-# Example route to add a new developer
-
-
-# @app.route('/add_developer', methods=['POST'])
-# def add_developer():
-#     try:
-#         data = request.json
-#         if 'name' not in data:
-#             return "Name is required", 400
-
-#         # All skills will default to 0 if not provided
-#         developer_doc = {"name": data["name"]}
-
-#         # Add any provided skills (must be between 0-5)
-#         for skill, level in data.items():
-#             if skill != "name":
-#                 if not isinstance(level, int) or level < 0 or level > 5:
-#                     return f"Skill level for {skill} must be between 0-5", 400
-#                 developer_doc[skill] = level
-
-#         mongo_client = pymongo.MongoClient(utils.connection_string)
-#         db = mongo_client["db"]
-#         result = db.DeveloperSkills.insert_one(developer_doc)
-
-#         return str(result.inserted_id)
-#     except Exception as e:
-#         return str(e), 500
-
-init_developer_skills()
