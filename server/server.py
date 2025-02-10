@@ -19,7 +19,7 @@ def sample_connection():
             "text": "My first blog post!",
             "tags": ["mongodb", "python", "pymongo"],
         }
-        response = str(collection_access.insert_one(db_access).inserted_id)
+        response = str(collection_access.insert_one(sample_data).inserted_id)
         return response
     else:
         return str(collection_access.find_one())
