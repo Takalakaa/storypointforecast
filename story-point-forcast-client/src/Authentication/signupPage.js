@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Col, Form, Card, Button, Row, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Label, Input, Modal, ModalHeader, ModalBody, Container } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
 
-export default function Signup() {
+export default function Signup({ onLogin }) {
   const baseUrl = "http://localhost:5000";
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -36,9 +36,28 @@ export default function Signup() {
 
     if (response.status === 200) {
         console.log("Signup successful");
-        navigate("/login"); // Redirect to login after successful signup
+        loginAfterSignup();
     } else if (response.status === 201) {
         errorModalToggle();
+    }
+  };
+
+const loginAfterSignup = async () => {
+    const route = baseUrl + "/login"; 
+    const response = await fetch(route, {
+      method: 'POST',
+      headers: { "Content-type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({ name: username, password: password, action: "login" }),
+    });
+  
+    if (response.status === 200) {
+        const data = await response.json();
+        if (data !== 0) {
+          onLogin(data); // Set token in Router.js
+          navigate("/"); // Redirect to home after login
+        }
+    } else {
+      errorModalToggle(); // Handle error if login fails
     }
   };
 

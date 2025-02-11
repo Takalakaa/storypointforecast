@@ -51,8 +51,7 @@ export default function Login({ onLogin }) {
           </div>
           <button type="submit" style={styles.button}>Login</button>
         </Form>
-
-        {/* Navigate to Signup */}
+        
         <Button color="link" onClick={() => navigate("/signup")} style={styles.signupButton}>
           Don't have an account? Sign Up
         </Button>
