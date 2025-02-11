@@ -3,6 +3,7 @@ from flask_restful import Resource, Api
 import secrets
 import pymongo
 import datetime
+import logging
 
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
@@ -10,6 +11,8 @@ port = "27017"
 
 
 connection_string = HEADSTRING + base_url + port
+
+logger = logging.getLogger()
 
 def make_connection(db):
     mongo_client = pymongo.MongoClient(connection_string)
@@ -19,12 +22,22 @@ def make_connection(db):
 def login(user, hashedPass):
     db = make_connection("users")
     result = db.authentication.find_one({"name": user, "password": hashedPass})
-    if(result == None):
+    
+    if result is None:
         return "0"
+
     name = result.get("name")
+    role = result.get("role")
     session_key = secrets.token_urlsafe(32)
-    db.authentication.find_one_and_replace({"name": user, "password": hashedPass},{"session_token": session_key})
-    return [name, session_key]
+
+    # Update session token
+    db.authentication.update_one(
+        {"name": user},
+        {"$set": {"session_token": session_key}}
+    )
+
+    return [name, role, session_key]
+
 
 def logout(user, session_key):
     db = make_connection("users")

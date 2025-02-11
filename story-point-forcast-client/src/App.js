@@ -1,15 +1,14 @@
-import Navbar from "./dashboard/Navbar"
-import Router from "./dashboard/Router";
+// App.js
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import RouterComponent from "./dashboard/Router";
 
-
-
-function App() {
+const App = () => {
   return (
-    <>
-      <Navbar />
-      <Router />
-    </>
-  )
-}
+    <Router>
+      <RouterComponent />
+    </Router>
+  );
+};
 
 export default App;
