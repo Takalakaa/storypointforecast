@@ -16,7 +16,6 @@ export default function Login() {
     let route = baseUrl + "/login"
     const response = await fetch (route, {
         method: 'POST',
-        mode:'no-cors',
         headers: {
           "Content-type": "application/json; charset=UTF-8"
         },
