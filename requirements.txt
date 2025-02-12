@@ -1,4 +1,4 @@
 Flask==3.0.3
 Flask_Cors==5.0.0
 Flask_RESTful==0.3.10
-psycopg2==2.9.9
+psycopg2-binary
