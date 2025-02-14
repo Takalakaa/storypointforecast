@@ -1,53 +1,90 @@
 from flask import Flask, request, jsonify
+from flask_restful import Api
 from flask_cors import CORS
-from pymongo import MongoClient
-from bson import ObjectId
+import pymongo
+import hashlib
+import utils
 
 app = Flask(__name__)
+api = Api(app)
 CORS(app)
 
-# Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
-db = client["team_profiles"]
-users_collection = db["users"]
-projects_collection = db["projects"]
+mongo_client = pymongo.MongoClient(utils.connection_string)
+db_access = mongo_client["db"]
+collection_access = db_access["profiles"]
 
-# API to get a user profile
-@app.route("/users/<user_id>", methods=["GET"])
-def get_user(user_id):
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    
-    user["_id"] = str(user["_id"])
-    return jsonify(user)
+# Seed initial data into MongoDB if empty
+def seed_data():
+    if collection_access.count_documents({}) == 0:
+        initial_users = [
+            {
+                "username": "johndoe123",
+                "name": "John Doe",
+                "password": hashlib.sha512("password123".encode()).hexdigest(),
+                "role": "Developer",
+                "skills": [
+                    {"skill": "Java", "rank": 4},
+                    {"skill": "Python", "rank": 3},
+                    {"skill": "React", "rank": 5}
+                ]
+            },
+            {
+                "username": "admin01",
+                "name": "Admin User",
+                "password": hashlib.sha512("adminpass".encode()).hexdigest(),
+                "role": "Admin",
+                "skills": [
+                    {"skill": "Project Management", "rank": 5},
+                    {"skill": "Python", "rank": 2}
+                ]
+            },
+            {
+                "username": "pmuser",
+                "name": "Project Manager",
+                "password": hashlib.sha512("pmpass".encode()).hexdigest(),
+                "role": "Project Manager",
+                "skills": [
+                    {"skill": "Agile", "rank": 4},
+                    {"skill": "Communication", "rank": 5}
+                ]
+            }
+        ]
+        collection_access.insert_many(initial_users)
 
-# API to edit user profile
-@app.route("/users/<user_id>", methods=["PUT"])
-def update_user(user_id):
-    data = request.json
-    updated_user = {
-        "name": data.get("name"),
-        "email": data.get("email"),
-        "skills": data.get("skills")
-    }
-    users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": updated_user})
-    return jsonify({"message": "User updated successfully"})
+@app.route('/profile/<username>', methods=['GET'])
+def get_profile(username):
+    user = collection_access.find_one({"username": username}, {"_id": 0})
+    if user:
+        return jsonify(user), 200
+    return jsonify({"error": "User not found"}), 404
 
-# API for managers to get all developers in a project
-@app.route("/projects/<project_id>/developers", methods=["GET"])
-def get_project_developers(project_id):
-    project = projects_collection.find_one({"_id": ObjectId(project_id)})
-    if not project:
-        return jsonify({"error": "Project not found"}), 404
+@app.route('/profile/<username>', methods=['PUT'])
+def update_profile(username):
+    data = request.get_json()
+    if 'password' in data:
+        data['password'] = hashlib.sha512(data['password'].encode()).hexdigest()
+    result = collection_access.update_one({"username": username}, {"$set": data}, upsert=True)
+    if result.matched_count:
+        return jsonify({"message": "Profile updated successfully"}), 200
+    return jsonify({"message": "Profile created successfully"}), 201
 
-    developer_ids = project.get("developers", [])
-    developers = list(users_collection.find({"_id": {"$in": [ObjectId(dev_id) for dev_id in developer_ids]}}))
-    
-    for dev in developers:
-        dev["_id"] = str(dev["_id"])
-    
-    return jsonify(developers)
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    name = data.get('name')
+    role = data.get('role')
+    password = hashlib.sha512(data.get('password').encode()).hexdigest()
+    return utils.addUser(name, role, password)
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    if data.get('action') == 'login':
+        hashed_pass = hashlib.sha512(data.get('password').encode()).hexdigest()
+        return utils.login(data.get('name'), hashed_pass)
+    else:
+        return utils.logout(data.get('name'), data.get('session_key'))
+
+if __name__ == '__main__':
+    seed_data()
+    app.run(debug=True)
