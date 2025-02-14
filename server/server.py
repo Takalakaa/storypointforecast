@@ -3,7 +3,7 @@ from flask_restful import Api
 from flask_cors import CORS
 import pymongo
 import pprint
-from storypointforecast.server.developer_db_setup import init_developer_skills
+from developer_db_setup import init_developer_skills
 import utils
 
 app = Flask(__name__)
