@@ -1,6 +1,6 @@
 import { Link, useMatch, useResolvedPath } from "react-router-dom";
 
-export default function Navbar({ onLogout }) {  // Accept onLogout as a prop
+export default function Navbar({ onLogout, accessLevel }) { 
   return (
     <nav className="nav">
       <Link to="/" className="site-title">
@@ -8,7 +8,7 @@ export default function Navbar({ onLogout }) {  // Accept onLogout as a prop
       </Link>
       <ul>
         <CustomLink to="/project">Project</CustomLink>
-        <CustomLink to="/compare">Compare</CustomLink>
+        {accessLevel > 1 && <CustomLink to="/compare">Compare</CustomLink>}
         <CustomLink to="/skills">Skills</CustomLink>
         <CustomLink to="/profile">Profile</CustomLink>
         <Link to="/login" onClick={onLogout}>Logout</Link>
