@@ -22,20 +22,15 @@ def make_connection(db):
 def login(user, hashedPass):
     db = make_connection("users")
     result = db.authentication.find_one({"name": user, "password": hashedPass})
-    
     if result is None:
         return "0"
-
     name = result.get("name")
     role = result.get("role")
     session_key = secrets.token_urlsafe(32)
-
-    # Update session token
     db.authentication.update_one(
         {"name": user},
         {"$set": {"session_token": session_key}}
     )
-
     return [name, role, session_key]
 
 
