@@ -18,16 +18,16 @@ def init_developer_skills():
         db.create_collection("developerSkills")
         print("developerSkills collection created")
 
-        # Example initial documents with lowercase skills
+        
         sample_developers = [
             {
-                "name": "John Doe",
+                "name": "john_doe",
                 "python": 4,
                 "javascript": 3,
                 "mongodb": 2
             },
             {
-                "name": "Jane Smith",
+                "name": "jane_smith",
                 "java": 5,
                 "python": 2,
                 "aws": 4

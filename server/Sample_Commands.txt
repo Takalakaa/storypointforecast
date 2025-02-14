@@ -1,13 +1,13 @@
 #GET
-curl "http://127.0.0.1:5000/developer/Jane%20Smith"
-curl "http://127.0.0.1:5000/developer/John%20Doe"
-curl "http://127.0.0.1:5000/developer/John%20Doe/skill/python"
+curl "http://127.0.0.1:5000/developer/jane_smith"
+curl "http://127.0.0.1:5000/developer/john_doe"
+curl "http://127.0.0.1:5000/developer/john_doe/skill/python"
 
 #PUT
-curl -X PUT "http://localhost:5000/developer/John%20Doe/skill/python" \
+curl -X PUT "http://localhost:5000/developer/john_doe/skill/python" \
      -H "Content-Type: application/json" \
      -d '{"value": 3}'
 
-curl -X PUT "http://localhost:5000/developer/John%20Doe/skill/aws" \
+curl -X PUT "http://localhost:5000/developer/john_doe/skill/aws" \
      -H "Content-Type: application/json" \
      -d '{"value": 3}'
