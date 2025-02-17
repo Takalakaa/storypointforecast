@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import TestDisplay from "./TestDisplay";
 import Login from "../Authentication/loginPage";
 import Signup from "../Authentication/signupPage";
-import Navbar from "../dashboard/Navbar";
+import MainNavbar from "../dashboard/Navbar";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -64,7 +64,7 @@ const RouterComponent = () => {
 
   return (
     <div className="container">
-      {!hideNavbar && <Navbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />} 
+      {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />} 
       <Routes>
         <Route path="/" element={<TestDisplay text={"HOME"} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
