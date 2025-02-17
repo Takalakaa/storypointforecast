@@ -1,6 +1,6 @@
 import { Link, useMatch, useResolvedPath } from "react-router-dom";
 
-export default function Navbar({ onLogout, accessLevel }) { 
+export default function MainNavbar({ onLogout, accessLevel }) { 
   return (
     <nav className="nav">
       <Link to="/" className="site-title">
