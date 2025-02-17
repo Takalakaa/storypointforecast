@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { Col, Form, Card, Button } from 'reactstrap';
+import { 
+  Col, 
+  Form, 
+  Card, 
+  Button, 
+  Label, 
+  Input, 
+  Container } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../dashboard/Navbar';
 
 export default function Login({ onLogin }) {
   const baseUrl = "http://localhost:5000";
@@ -37,30 +45,36 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <Card>
-      <Col style={styles.container}>
-        <h2>Login</h2>
-        <Form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="username">Username:</label>
-            <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-          </div>
-          <div style={styles.inputGroup}>
-            <label htmlFor="password">Password:</label>
-            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          <button type="submit" style={styles.button}>Login</button>
-        </Form>
-        
-        <Button color="link" onClick={() => navigate("/signup")} style={styles.signupButton}>
-          Don't have an account? Sign Up
-        </Button>
+    <Container>
+      <Navbar/>
+      <Col md = {{size: 5, offset: 4}} style={styles.mainCol}>
+        <Card>
+          <Col style={styles.container}>
+            <h2>Login</h2>
+            <Form onSubmit={handleSubmit} style={styles.form}>
+              <Col style={styles.inputGroup}>
+                <Label htmlFor="username">Username:</Label>
+                <Input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              </Col>
+              <Col style={styles.inputGroup}>
+                <Label htmlFor="password">Password:</Label>
+                <Input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </Col>
+              <Button type="submit" color='primary' style={styles.loginButton}>Login</Button>
+            </Form>
+            <Button color="link" onClick={() => navigate("/signup")} style={styles.signupButton}>
+              Don't have an account? Sign Up
+            </Button>
+          </Col>
+        </Card>
       </Col>
-    </Card>
+    </Container>
   );
 }
 
 const styles = {
   container: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  signupButton: { marginTop: '10px', textDecoration: 'underline', cursor: 'pointer' }
+  signupButton: { marginTop: '10px', textDecoration: 'underline', cursor: 'pointer' },
+  loginButton: { marginTop: '10px', cursor: 'pointer'},
+  mainCol: {marginTop: '20%'}
 };
