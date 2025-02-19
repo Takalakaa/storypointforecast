@@ -1,10 +1,10 @@
 import { Link, useMatch, useResolvedPath } from "react-router-dom";
-import { Col, Navbar } from "reactstrap";
+import { Col, Navbar, Nav } from "reactstrap";
 
 export default function MainNavbar({ onLogout }) {  // Accept onLogout as a prop
   return (
-    <Col md = {{size: 12}}>
-      <Navbar className="nav">
+    <Navbar>
+      <Nav>
         <Link to="/" className="site-title">
           Story Point Forcaster
         </Link>
@@ -15,8 +15,8 @@ export default function MainNavbar({ onLogout }) {  // Accept onLogout as a prop
           <CustomLink to="/profile">Profile</CustomLink>
           <Link to="/login" onClick={onLogout}>Logout</Link>
         </ul>
-      </Navbar>
-    </Col>
+      </Nav>
+    </Navbar>
   );
 }
 

@@ -8,7 +8,6 @@ import {
   Input, 
   Container } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../dashboard/Navbar';
 
 export default function Login({ onLogin }) {
   const baseUrl = "http://localhost:5000";
@@ -46,7 +45,6 @@ export default function Login({ onLogin }) {
 
   return (
     <Container>
-      <Navbar/>
       <Col md = {{size: 5, offset: 4}} style={styles.mainCol}>
         <Card>
           <Col style={styles.container}>

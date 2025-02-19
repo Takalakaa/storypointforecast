@@ -3,7 +3,8 @@ import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import TestDisplay from "./TestDisplay";
 import Login from "../Authentication/loginPage";
 import Signup from "../Authentication/signupPage";
-import Navbar from "../dashboard/Navbar";
+import MainNavbar from "../dashboard/Navbar";
+import { Container } from "reactstrap";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -51,8 +52,8 @@ const RouterComponent = () => {
   const hideNavbar = location.pathname === "/login" || location.pathname === "/signup";
 
   return (
-    <div className="container">
-      {!hideNavbar && <Navbar token={token} onLogout={handleLogout} />} 
+    <Container>
+      {!hideNavbar && <MainNavbar token={token} onLogout={handleLogout} />} 
       <Routes>
         <Route path="/" element={<TestDisplay text={"HOME"} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
@@ -62,7 +63,7 @@ const RouterComponent = () => {
         <Route path="/skills" element={<TestDisplay text={"SKILLS"} />} />
         <Route path="/profile" element={<TestDisplay text={userName + " : " + userRole} />} />
       </Routes>
-    </div>
+    </Container>
   );
 };
 
