@@ -8,8 +8,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.29.0",
-    "react-scripts": "5.0.1",
-    "reactstrap": "^9.2.3"
+    "reactstrap": "^9.2.3",
+    "story-point-forcast-client": "file:"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -36,6 +36,7 @@
     ]
   },
   "devDependencies": {
+    "react-scripts": "^5.0.1",
     "web-vitals": "^4.2.4"
   }
 }
