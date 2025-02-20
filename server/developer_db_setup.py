@@ -18,7 +18,7 @@ def init_developer_skills():
         db.create_collection("developerSkills")
         print("developerSkills collection created")
 
-        
+        # Example initial documents with lowercase skills
         sample_developers = [
             {
                 "name": "john_doe",

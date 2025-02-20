@@ -6,6 +6,8 @@ import pprint
 from developer_db_setup import init_developer_skills
 import json
 import hashlib
+import pprint
+from developer_db_setup import init_developer_skills
 import utils
 
 app = Flask(__name__)
@@ -28,7 +30,8 @@ def sample_connection():
         return response
     else:
         return str(collection_access.find_one())
-    
+
+
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
     if request.method == "POST":
@@ -42,13 +45,14 @@ def signup():
     else:
         return "Hello World"
 
+
 @app.route('/login', methods=['POST', 'GET'])
-def login():    
+def login():
     if request.method == "POST":
         data = request.get_json()
         action = data.get('action')
         name = data.get('name')
-        if(action == 'login'):
+        if (action == 'login'):
             password = data.get('password')
             password = password.encode()
             hashed_pass = hashlib.sha512(password).hexdigest()
