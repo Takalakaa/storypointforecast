@@ -4,7 +4,7 @@ import TestDisplay from "./TestDisplay";
 import Login from "../Authentication/loginPage";
 import Signup from "../Authentication/signupPage";
 import MainNavbar from "../dashboard/Navbar";
-
+import SkillsDisplay from "./skillsDisplay.js";
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
   const [userName, setUserName] = useState("");  
@@ -71,7 +71,7 @@ const RouterComponent = () => {
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
-        <Route path="/skills" element={<TestDisplay text={"SKILLS"} />} />
+        <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
         <Route path="/profile" element={<TestDisplay text={userName + " : " + userRole + " : " + accessLevel} />} />
       </Routes>
     </div>
