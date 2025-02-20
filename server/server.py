@@ -5,7 +5,7 @@ import pymongo
 import json
 import hashlib
 import pprint
-from storypointforecast.server.developer_db_setup import init_developer_skills
+from developer_db_setup import init_developer_skills
 import utils
 
 app = Flask(__name__)
