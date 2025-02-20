@@ -24,28 +24,28 @@ def run_gh_command(command):
         return jsonify({"success": False, "error": str(e)})
 
 
-# 🔹 GitHub Repository Information
+# GitHub Repository Information
 @app.route('/github/repo/<owner>/<repo>', methods=['GET'])
 def get_repo_info(owner, repo):
     command = f"gh repo view {owner}/{repo} --json name,description,url,owner"
     return run_gh_command(command)
 
 
-# 🔹 List Projects in a Repository
+# List Projects in a Repository
 @app.route('/github/projects/repo/<owner>/<repo>', methods=['GET'])
 def get_repo_projects(owner, repo):
     command = f"gh project list --repo {owner}/{repo} --json number,title,url"
     return run_gh_command(command)
 
 
-# 🔹 List Projects in an Organization
+# List Projects in an Organization
 @app.route('/github/projects/org/<org>', methods=['GET'])
 def get_org_projects(org):
     command = f"gh project list --org {org} --json number,title,url"
     return run_gh_command(command)
 
 
-# 🔹 Get Details of a Specific Project
+# Get Details of a Specific Project
 @app.route('/github/project/<owner>/<repo>/<int:project_number>', methods=['GET'])
 def get_project_details(owner, repo, project_number):
     command = f"gh project view {project_number} --repo {owner}/{repo} --json title,url"
@@ -169,7 +169,6 @@ def update_skill(name, skill):
 # get all pull request Code Changes curl http://127.0.0.1:5000/github/prs/Takalakaa/storypointforecast
 @app.route('/github/prs/<owner>/<repo>', methods=['GET'])
 def get_all_prs(owner, repo):
-    """Fetch all pull requests (open, closed, merged) from a repository"""
     command = f"gh pr list --repo {owner}/{repo} --state all --json number,title,state,url"
     return run_gh_command(command)
 
@@ -177,7 +176,6 @@ def get_all_prs(owner, repo):
 # estimate story points curl http://127.0.0.1:5000/github/project/Takalakaa/3/estimates
 @app.route('/github/project/<owner>/<int:project_number>/estimates', methods=['GET'])
 def get_project_estimates(owner, project_number):
-    """Fetch story point estimates from a GitHub ProjectV2"""
     command = f"gh project item-list {project_number} --owner {owner} --format json"
     return run_gh_command(command)
 
