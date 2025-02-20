@@ -1,18 +1,55 @@
 from flask import Flask, jsonify, request
-from flask_restful import Api, reqparse
+from flask_restful import Api
 from flask_cors import CORS
 import pymongo
-import pprint
-from developer_db_setup import init_developer_skills
-import json
 import hashlib
-import pprint
-from developer_db_setup import init_developer_skills
+import subprocess
 import utils
+import json
+from developer_db_setup import init_developer_skills
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
+
+# Utility function to run GitHub CLI commands
+def run_gh_command(command):
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        if result.returncode == 0:
+            return jsonify({"success": True, "data": json.loads(result.stdout.strip())})
+        else:
+            return jsonify({"success": False, "error": result.stderr.strip()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+# 🔹 GitHub Repository Information
+@app.route('/github/repo/<owner>/<repo>', methods=['GET'])
+def get_repo_info(owner, repo):
+    command = f"gh repo view {owner}/{repo} --json name,description,url,owner"
+    return run_gh_command(command)
+
+
+# 🔹 List Projects in a Repository
+@app.route('/github/projects/repo/<owner>/<repo>', methods=['GET'])
+def get_repo_projects(owner, repo):
+    command = f"gh project list --repo {owner}/{repo} --json number,title,url"
+    return run_gh_command(command)
+
+
+# 🔹 List Projects in an Organization
+@app.route('/github/projects/org/<org>', methods=['GET'])
+def get_org_projects(org):
+    command = f"gh project list --org {org} --json number,title,url"
+    return run_gh_command(command)
+
+
+# 🔹 Get Details of a Specific Project
+@app.route('/github/project/<owner>/<repo>/<int:project_number>', methods=['GET'])
+def get_project_details(owner, repo, project_number):
+    command = f"gh project view {project_number} --repo {owner}/{repo} --json title,url"
+    return run_gh_command(command)
 
 
 @app.route('/sample_connection', methods=['POST', 'GET'])
