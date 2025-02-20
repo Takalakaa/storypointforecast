@@ -8,7 +8,7 @@ export default function ProfilePage() {
   const username = 'johndoe123'; // Change this to dynamically fetch the logged-in user's username
 
   useEffect(() => {
-    fetch(`http://localhost:5000/profile/${username}`)
+    fetch(`http://127.0.0.1:5000/profile/${username}`)
       .then((res) => res.json())
       .then((data) => setProfile(data))
       .catch((err) => console.error(err));
@@ -26,7 +26,7 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
-    fetch(`http://localhost:5000/profile/${username}`, {
+    fetch(`http://127.0.0.1:5000/profile/${username}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile),
