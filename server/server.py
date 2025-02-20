@@ -164,6 +164,23 @@ def update_skill(name, skill):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+# get all pull request Code Changes curl http://127.0.0.1:5000/github/prs/Takalakaa/storypointforecast
+@app.route('/github/prs/<owner>/<repo>', methods=['GET'])
+def get_all_prs(owner, repo):
+    """Fetch all pull requests (open, closed, merged) from a repository"""
+    command = f"gh pr list --repo {owner}/{repo} --state all --json number,title,state,url"
+    return run_gh_command(command)
+
+
+# estimate story points curl http://127.0.0.1:5000/github/project/Takalakaa/3/estimates
+@app.route('/github/project/<owner>/<int:project_number>/estimates', methods=['GET'])
+def get_project_estimates(owner, project_number):
+    """Fetch story point estimates from a GitHub ProjectV2"""
+    command = f"gh project item-list {project_number} --owner {owner} --format json"
+    return run_gh_command(command)
+
 
 
 if __name__ == '__main__':
