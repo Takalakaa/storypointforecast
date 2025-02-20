@@ -4,6 +4,7 @@ import TestDisplay from "./TestDisplay";
 import Login from "../Authentication/loginPage";
 import Signup from "../Authentication/signupPage";
 import MainNavbar from "../dashboard/Navbar";
+import AssessmentPage from "../assessment/AssessmentPage";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -71,6 +72,7 @@ const RouterComponent = () => {
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
+        <Route path="/assessment" element={<AssessmentPage text={"ASSESSMENT"} />} />
         <Route path="/skills" element={<TestDisplay text={"SKILLS"} />} />
         <Route path="/profile" element={<TestDisplay text={userName + " : " + userRole + " : " + accessLevel} />} />
       </Routes>

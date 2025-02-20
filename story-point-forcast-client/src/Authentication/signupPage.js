@@ -54,7 +54,8 @@ const loginAfterSignup = async () => {
         const data = await response.json();
         if (data !== 0) {
           onLogin(data); // Set token in Router.js
-          navigate("/"); // Redirect to home after login
+          // FIX THIS 
+          navigate("/"); // Redirect to assessment after login
         }
     } else {
       errorModalToggle(); // Handle error if login fails
