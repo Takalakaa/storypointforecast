@@ -7,7 +7,7 @@ import MainNavbar from "../dashboard/Navbar";
 import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
 import Dashboard from "./Dashboard.js";
-import { Profile } from  "./Profile.js";
+import ProfilePage from  "./Profile.js";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -78,7 +78,7 @@ const RouterComponent = () => {
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
         <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </div>
   );
