@@ -75,7 +75,7 @@ const RouterComponent = () => {
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
-        <Route path="/assessment" element={<AssessmentPage text={"ASSESSMENT"} />} />
+        <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
         <Route path="/profile" element={<TestDisplay text={userName + " : " + userRole + " : " + accessLevel} />} />
       </Routes>

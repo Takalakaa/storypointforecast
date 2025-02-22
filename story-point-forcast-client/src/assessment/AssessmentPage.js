@@ -11,14 +11,13 @@ import {
     FormGroup
 } from "reactstrap";
 
-const AssessmentPage = () => {
+const AssessmentPage = ({userName}) => {
     const [text, setText] = useState('');
     const [tags, setTags] = useState({});
     const [skillLevel, setSkillLevel] = useState(0);
     const [editTag, setEditTag] = useState('');
 
     useEffect(() => {
-        // First try loading from skills db, otherwise start initial assessment
         const skills = sessionStorage.getItem('skills');
         if (skills) {
             setTags(JSON.parse(skills));
@@ -59,6 +58,26 @@ const AssessmentPage = () => {
             delete updatedTags[tag];
             return updatedTags;
         });
+    };
+
+    const handleComplete = async () => {
+        try {
+            const response = await fetch("http://localhost:5000/skills", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(tags), 
+            });
+
+            if (response.ok) {
+                alert("Skills submitted successfully!");
+            } else {
+                alert("Failed to submit skills. Please try again.");
+            }
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
     };
 
     return (
@@ -103,6 +122,12 @@ const AssessmentPage = () => {
                                     </Col>
                                 </Row>
                             ))}
+                        </Col>
+                    </Row>
+
+                    <Row className="text-center mt-4">
+                        <Col>
+                            <Button color="success" onClick={handleComplete}>Complete</Button>
                         </Col>
                     </Row>
                 </Form>
