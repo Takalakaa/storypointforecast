@@ -6,6 +6,7 @@ import Signup from "../Authentication/signupPage";
 import MainNavbar from "../dashboard/Navbar";
 import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
+import Dashboard from "./Dashboard.js";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -32,6 +33,7 @@ const RouterComponent = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
+    sessionStorage.removeItem("skills");
     navigate("/login");
   };
 
@@ -68,7 +70,7 @@ const RouterComponent = () => {
     <div>
       {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />}
       <Routes>
-        <Route path="/" element={<TestDisplay text={"HOME"} />} />
+        <Route path="/" element={<Dashboard userName={userName} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />

@@ -19,7 +19,6 @@ const AssessmentPage = () => {
 
     useEffect(() => {
         // First try loading from skills db, otherwise start initial assessment
-
         const skills = sessionStorage.getItem('skills');
         if (skills) {
             setTags(JSON.parse(skills));
@@ -33,7 +32,6 @@ const AssessmentPage = () => {
             sessionStorage.removeItem('skills');
         }
     }, [tags]);
-
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
@@ -64,8 +62,8 @@ const AssessmentPage = () => {
     };
 
     return (
-        <Container>
-            <Card body className="p-4">
+        <Container className="mt-5">
+            <Card body className="p-4 shadow-sm">
                 <h3 className="text-center">Tag Input</h3>
                 <Form>
                     <FormGroup>
