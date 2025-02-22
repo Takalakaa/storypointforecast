@@ -9,8 +9,8 @@ import AssessmentPage from "../assessment/AssessmentPage";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
-  const [userName, setUserName] = useState("");  
-  const [userRole, setUserRole] = useState("");  
+  const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState("");
   const [accessLevel, setAccessLevel] = useState(0); // 0: no access | 1: developer | 2: manager | 3: admin
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,13 +22,13 @@ const RouterComponent = () => {
     localStorage.setItem("name", name);
     localStorage.setItem("role", role);
     localStorage.setItem("authToken", authToken);
-    navigate("/"); 
+    navigate("/");
   };
 
   const handleLogout = () => {
     setToken(null);
-    setUserName("");  
-    handleRole("");  
+    setUserName("");
+    handleRole("");
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
@@ -36,8 +36,8 @@ const RouterComponent = () => {
   };
 
   const handleRole = useCallback((role) => {
-    const accessLevelConfig = {"Developer": 1, "Project Manager": 2, "Admin": 3}
-    if(accessLevelConfig[role] != null) {
+    const accessLevelConfig = { "Developer": 1, "Project Manager": 2, "Admin": 3 }
+    if (accessLevelConfig[role] != null) {
       setAccessLevel(accessLevelConfig[role]);
       setUserRole(role);
     } else {
@@ -58,15 +58,15 @@ const RouterComponent = () => {
       setUserName(savedName);
       handleRole(savedRole);
     } else if (window.location.pathname === "/signup") {
-        // Do nothing
+      // Do nothing
     } else {
       navigate("/login"); // Redirect to /login if no token
     }
   }, [navigate, handleRole]);
 
   return (
-    <div className="container">
-      {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />} 
+    <div>
+      {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />}
       <Routes>
         <Route path="/" element={<TestDisplay text={"HOME"} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />

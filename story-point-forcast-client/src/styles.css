@@ -1,16 +1,15 @@
 /* styles.css */
-* {
-    box-sizing: border-box;
-  }
+/* * {
+    text-align: center;
+  } */
   
   body {
     margin: 0;
   }
   
-  .container {
-    margin: 1rem;
-    text-align: center;
-  }
+  /* .container {
+    
+  } */
   
   .nav {
     background-color: #333;

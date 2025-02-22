@@ -1,61 +1,115 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+    Container,
+    Card,
+    Row,
+    Col,
+    Form,
+    Label,
+    Input,
+    Button,
+    FormGroup
+} from "reactstrap";
 
 const AssessmentPage = () => {
     const [text, setText] = useState('');
     const [tags, setTags] = useState({});
-
     const [skillLevel, setSkillLevel] = useState(0);
     const [editTag, setEditTag] = useState('');
 
+    useEffect(() => {
+        // First try loading from skills db, otherwise start initial assessment
+
+        const skills = sessionStorage.getItem('skills');
+        if (skills) {
+            setTags(JSON.parse(skills));
+        }
+    }, []);
+
+    useEffect(() => {
+        if (Object.keys(tags).length > 0) {
+            sessionStorage.setItem('skills', JSON.stringify(tags));
+        } else {
+            sessionStorage.removeItem('skills');
+        }
+    }, [tags]);
+
+
     const handleKeyDown = (e) => {
-        if ((e.key === 'Enter')) {
-            if (editTag.length !== 0) { // Validate that its numbers 1-5 only
-                tags[editTag] = skillLevel;
-                setTags({...tags});
-                setSkillLevel(0);
-                setEditTag('');
+        if (e.key === 'Enter') {
+            if (editTag.length !== 0) {
+                const level = parseInt(skillLevel, 10);
+                if (level >= 0 && level <= 5) {
+                    setTags(prevTags => ({ ...prevTags, [editTag]: level }));
+                    setSkillLevel(0);
+                    setEditTag('');
+                    sessionStorage.setItem('skills', JSON.stringify(tags));
+                } else {
+                    alert("Skill level must be between 0 and 5");
+                }
             } else if (text.trim() !== '') {
-                setTags({...tags, [text.trim()] : 0});
+                setTags(prevTags => ({ ...prevTags, [text.trim()]: 0 }));
                 setText('');
+                sessionStorage.setItem('skills', JSON.stringify(tags));
             }
         }
     };
 
     const removeTag = (tag) => {
-        const updatedTags = { ...tags };
-        delete updatedTags[tag]; 
-        setTags(updatedTags);
+        setTags(prevTags => {
+            const updatedTags = { ...prevTags };
+            delete updatedTags[tag];
+            return updatedTags;
+        });
     };
 
     return (
-        <div>
-            <input
-                type="text"
-                value={text}
-                placeholder="Enter tags, separated by commas or press Enter"
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                style={{width: "400px"}}
-            />
-            <div>
-                {Object.keys(tags).map((tag) => (
-                    <div key={tag}>
-                        {tag + " : "}
-                        { tag !== editTag ?
-                            tags[tag] : 
-                            <input // This is not working
-                                type="text"
-                                value={text}
-                                onChange={(e) => setSkillLevel(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                            />
-                        }
-                        <button onClick={() => removeTag(tag)}>x</button>
-                        <button onClick={() => setEditTag(tag)}>/</button>
-                    </div>
-                ))}
-            </div>
-        </div>
+        <Container>
+            <Card body className="p-4">
+                <h3 className="text-center">Tag Input</h3>
+                <Form>
+                    <FormGroup>
+                        <Label for="tagInput">Enter tags and press Enter:</Label>
+                        <Input
+                            type="text"
+                            id="tagInput"
+                            value={text}
+                            placeholder="Enter tags"
+                            onChange={(e) => setText(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </FormGroup>
+                    <Row>
+                        <Col>
+                            <h5 className="mt-3">Tags</h5>
+                            {Object.keys(tags).map((tag) => (
+                                <Row key={tag} className="align-items-center mb-2">
+                                    <Col>
+                                        <strong>{tag}:</strong>
+                                        {editTag === tag ? (
+                                            <Input
+                                                type="number"
+                                                value={skillLevel}
+                                                onChange={(e) => setSkillLevel(e.target.value)}
+                                                onKeyDown={handleKeyDown}
+                                                min="0"
+                                                max="5"
+                                            />
+                                        ) : (
+                                            ` ${tags[tag]}`
+                                        )}
+                                    </Col>
+                                    <Col xs="auto">
+                                        <Button size="sm" color="warning" onClick={() => { setEditTag(tag); setSkillLevel(tags[tag]); }}>Edit</Button>
+                                        <Button size="sm" color="danger" className="ms-2" onClick={() => removeTag(tag)}>Remove</Button>
+                                    </Col>
+                                </Row>
+                            ))}
+                        </Col>
+                    </Row>
+                </Form>
+            </Card>
+        </Container>
     );
 };
 
