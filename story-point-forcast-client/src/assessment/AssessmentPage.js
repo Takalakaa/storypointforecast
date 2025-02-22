@@ -10,19 +10,34 @@ import {
     Button,
     FormGroup
 } from "reactstrap";
+import { useNavigate } from "react-router-dom";
 
-const AssessmentPage = ({userName}) => {
+const AssessmentPage = ({ userName }) => {
     const [text, setText] = useState('');
     const [tags, setTags] = useState({});
     const [skillLevel, setSkillLevel] = useState(0);
     const [editTag, setEditTag] = useState('');
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const skills = sessionStorage.getItem('skills');
-        if (skills) {
-            setTags(JSON.parse(skills));
-        }
-    }, []);
+        const fetchData = async () => {
+            const response = await fetch(`http://localhost:5000/developer/${userName}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    setTags(data);
+                }
+            } else {
+                const skills = sessionStorage.getItem('skills');
+                if (skills) {
+                    setTags(JSON.parse(skills));
+                }
+            }
+        };
+
+        fetchData();
+    }, [userName]);
 
     useEffect(() => {
         if (Object.keys(tags).length > 0) {
@@ -37,17 +52,23 @@ const AssessmentPage = ({userName}) => {
             if (editTag.length !== 0) {
                 const level = parseInt(skillLevel, 10);
                 if (level >= 0 && level <= 5) {
-                    setTags(prevTags => ({ ...prevTags, [editTag]: level }));
+                    setTags(prevTags => {
+                        const updatedTags = { ...prevTags, [editTag]: level };
+                        sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Only update sessionStorage when tags are updated
+                        return updatedTags;
+                    });
                     setSkillLevel(0);
                     setEditTag('');
-                    sessionStorage.setItem('skills', JSON.stringify(tags));
                 } else {
                     alert("Skill level must be between 0 and 5");
                 }
             } else if (text.trim() !== '') {
-                setTags(prevTags => ({ ...prevTags, [text.trim()]: 0 }));
+                setTags(prevTags => {
+                    const updatedTags = { ...prevTags, [text.trim()]: 0 };
+                    sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Only update sessionStorage when tags are updated
+                    return updatedTags;
+                });
                 setText('');
-                sessionStorage.setItem('skills', JSON.stringify(tags));
             }
         }
     };
@@ -56,24 +77,29 @@ const AssessmentPage = ({userName}) => {
         setTags(prevTags => {
             const updatedTags = { ...prevTags };
             delete updatedTags[tag];
+            sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Update sessionStorage after removing a tag
             return updatedTags;
         });
     };
 
     const handleComplete = async () => {
         try {
-            const response = await fetch("http://localhost:5000/skills", {
+            const postData = tags;
+
+            const response = await fetch(`http://localhost:5000/developer/${userName}/skills`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(tags), 
+                body: JSON.stringify(postData),
             });
 
             if (response.ok) {
                 alert("Skills submitted successfully!");
+                navigate("/");
             } else {
-                alert("Failed to submit skills. Please try again.");
+                const errorData = await response.json();
+                alert(`Failed to submit skills. Error: ${errorData.error || "Unknown error"}`);
             }
         } catch (error) {
             alert("Error: " + error.message);
