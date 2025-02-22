@@ -34,6 +34,8 @@ def sample_connection():
 
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
+    mongo_client = pymongo.MongoClient(utils.connection_string)
+    db = mongo_client["db"]
     if request.method == "POST":
         data = request.get_json()
         name = data.get('name')
@@ -41,7 +43,9 @@ def signup():
         password = data.get('password')
         password = password.encode()
         hashed_pass = hashlib.sha512(password).hexdigest()
+        db.developerSkills.insert_one({"name": name})
         return utils.addUser(name, role, hashed_pass)
+
     else:
         return "Hello World"
 
