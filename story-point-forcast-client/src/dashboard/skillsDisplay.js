@@ -136,7 +136,7 @@ const SkillsDisplay = ({ userName }) => {
             <Modal isOpen={errorModalOpen} toggle={toggleErrorModal}>
                 <ModalHeader toggle={toggleErrorModal}>Error</ModalHeader>
                 <ModalBody>{error ? error : "An unknown error occurred."}</ModalBody>
-                <Button color="primary" onClick={() => navigate("/home")}>
+                <Button color="primary" onClick={() => navigate('/')}>
                     Go Back
                 </Button>
             </Modal>
