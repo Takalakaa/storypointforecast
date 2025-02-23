@@ -115,7 +115,7 @@ const SkillsDisplay = ({ userName }) => {
                 <Col md="8" lg="6">
                     <Card>
                         <CardBody>
-                            <CardTitle tag="h2" className="text-center">Developer Skills</CardTitle>
+                            <CardTitle tag="h2" className="text-center">Skills</CardTitle>
                             {developerData ? (
                                 <div>
                                     <CardText>
