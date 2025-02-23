@@ -14,9 +14,9 @@ import { useNavigate } from "react-router-dom";
 
 const AssessmentPage = ({ userName }) => {
     const [text, setText] = useState('');
-    const [skills, setskills] = useState({});
+    const [skills, setSkills] = useState({});
     const [skillLevel, setSkillLevel] = useState(0);
-    const [editskill, setEditskill] = useState('');
+    const [editSkill, setEditSkill] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -26,12 +26,12 @@ const AssessmentPage = ({ userName }) => {
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
-                    setskills(data);
+                    setSkills(data);
                 }
             } else {
-                const skills = sessionStorage.getItem('skills');
-                if (skills) {
-                    setskills(JSON.parse(skills));
+                const storedSkills = sessionStorage.getItem('skills');
+                if (storedSkills) {
+                    setSkills(JSON.parse(storedSkills));
                 }
             }
         };
@@ -49,36 +49,34 @@ const AssessmentPage = ({ userName }) => {
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-            if (editskill.length !== 0) {
+            e.preventDefault();
+            if (editSkill.length !== 0) {
                 const level = parseInt(skillLevel, 10);
                 if (level >= 0 && level <= 5) {
-                    setskills(prevskills => {
-                        const updatedskills = { ...prevskills, [editskill]: level };
-                        sessionStorage.setItem('skills', JSON.stringify(updatedskills));
-                        return updatedskills;
+                    setSkills(prevSkills => {
+                        const updatedSkills = { ...prevSkills, [editSkill]: level };
+                        return updatedSkills;
                     });
                     setSkillLevel(0);
-                    setEditskill('');
+                    setEditSkill('');
                 } else {
                     alert("Skill level must be between 0 and 5");
                 }
             } else if (text.trim() !== '') {
-                setskills(prevskills => {
-                    const updatedskills = { ...prevskills, [text.trim()]: 0 };
-                    sessionStorage.setItem('skills', JSON.stringify(updatedskills));
-                    return updatedskills;
+                setSkills(prevSkills => {
+                    const updatedSkills = { ...prevSkills, [text.trim()]: 0 };
+                    return updatedSkills;
                 });
                 setText('');
             }
         }
     };
 
-    const removeskill = (skill) => {
-        setskills(prevskills => {
-            const updatedskills = { ...prevskills };
-            delete updatedskills[skill];
-            sessionStorage.setItem('skills', JSON.stringify(updatedskills));
-            return updatedskills;
+    const removeSkill = (skill) => {
+        setSkills(prevSkills => {
+            const updatedSkills = { ...prevSkills };
+            delete updatedSkills[skill];
+            return updatedSkills;
         });
     };
 
@@ -129,7 +127,7 @@ const AssessmentPage = ({ userName }) => {
                                 <Row key={skill} className="align-items-center mb-2">
                                     <Col>
                                         <strong>{skill}:</strong>
-                                        {editskill === skill ? (
+                                        {editSkill === skill ? (
                                             <Input
                                                 type="number"
                                                 value={skillLevel}
@@ -143,8 +141,8 @@ const AssessmentPage = ({ userName }) => {
                                         )}
                                     </Col>
                                     <Col xs="auto">
-                                        <Button size="sm" color="warning" onClick={() => { setEditskill(skill); setSkillLevel(skills[skill]); }}>Edit</Button>
-                                        <Button size="sm" color="danger" className="ms-2" onClick={() => removeskill(skill)}>Remove</Button>
+                                        <Button size="sm" color="warning" onClick={() => { setEditSkill(skill); setSkillLevel(skills[skill]); }}>Edit</Button>
+                                        <Button size="sm" color="danger" className="ms-2" onClick={() => removeSkill(skill)}>Remove</Button>
                                     </Col>
                                 </Row>
                             ))}
