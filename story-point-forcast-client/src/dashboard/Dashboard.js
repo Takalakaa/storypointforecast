@@ -1,12 +1,12 @@
 import React from "react";
 import { Container, Button, Row, Col, Card, CardBody, CardTitle } from "reactstrap";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = ({userName}) => {
-    const navigate = useNavigate(); // Hook to handle navigation
+    const navigate = useNavigate();
 
     const handleNavigateToAssessment = () => {
-        navigate("/assessment"); // Navigates to the /assessment page
+        navigate("/assessment");
     };
 
     return (
@@ -22,7 +22,7 @@ const Dashboard = ({userName}) => {
                                 <Col>
                                     <Button
                                         color="primary"
-                                        onClick={handleNavigateToAssessment} // On click, go to /assessment
+                                        onClick={handleNavigateToAssessment}
                                     >
                                         Go to Assessment Page
                                     </Button>
