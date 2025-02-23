@@ -4,6 +4,8 @@ from flask_cors import CORS
 import pymongo
 import hashlib
 import subprocess
+
+import requests
 import utils
 import json
 from developer_db_setup import init_developer_skills
@@ -15,6 +17,9 @@ CORS(app)
 
 mongo_client = pymongo.MongoClient(utils.connection_string)
 db_access = mongo_client["db"]
+GITHUB_API_BASE = "https://api.github.com"
+GITHUB_TOKEN = ""
+GPTAPIToken = ""
 # collection_access = db_access["profiles"]
 # collection_access = db_access["collection"]
 
@@ -213,11 +218,6 @@ def get_project_estimates(owner, project_number):
     return run_gh_command(command)
 
 
-@app.route('/github/prs/<owner>/<repo>/pull/<pr_id>', methods=['POST'])
-def analyze_pr(owner, repo, pr_id):
-    return jsonify({"message": f"Analyzing PR {pr_id} in {owner}/{repo}"}), 200
-
-
 @app.route('/developer/<name>/skills', methods=['POST']) 
 def update_skills(name):
     try:
@@ -260,6 +260,36 @@ def update_skills(name):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/github/analyze_pr/<owner>/<repo>/<pr_id>', methods=['GET'])
+def analyze_pr(owner, repo, pr_id):
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pr_id}/files"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to fetch PR details", "status": response.status_code}), response.status_code
+
+    file_changes = response.json()
+    file_list = [file["filename"] for file in file_changes]
+
+    user_query = f"Analyze the following PR changes:\n{', '.join(file_list)}\n" \
+                 "Identify primary programming languages used, categorize the development type (frontend, backend, database), " \
+                 "and highlight key software development updates such as API updates, UI changes, or database modifications."
+
+    gpt_response = utils.queryGPT(user_query)
+
+    return jsonify({
+        "files_changed": file_list,
+        "gpt_analysis": gpt_response
+    })
+
+
 
 if __name__ == '__main__':
     utils.setupAPITokens()
