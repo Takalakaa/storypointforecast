@@ -14,9 +14,9 @@ import { useNavigate } from "react-router-dom";
 
 const AssessmentPage = ({ userName }) => {
     const [text, setText] = useState('');
-    const [tags, setTags] = useState({});
+    const [skills, setskills] = useState({});
     const [skillLevel, setSkillLevel] = useState(0);
-    const [editTag, setEditTag] = useState('');
+    const [editskill, setEditskill] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -26,12 +26,12 @@ const AssessmentPage = ({ userName }) => {
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
-                    setTags(data);
+                    setskills(data);
                 }
             } else {
                 const skills = sessionStorage.getItem('skills');
                 if (skills) {
-                    setTags(JSON.parse(skills));
+                    setskills(JSON.parse(skills));
                 }
             }
         };
@@ -40,51 +40,51 @@ const AssessmentPage = ({ userName }) => {
     }, [userName]);
 
     useEffect(() => {
-        if (Object.keys(tags).length > 0) {
-            sessionStorage.setItem('skills', JSON.stringify(tags));
+        if (Object.keys(skills).length > 0) {
+            sessionStorage.setItem('skills', JSON.stringify(skills));
         } else {
             sessionStorage.removeItem('skills');
         }
-    }, [tags]);
+    }, [skills]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
-            if (editTag.length !== 0) {
+            if (editskill.length !== 0) {
                 const level = parseInt(skillLevel, 10);
                 if (level >= 0 && level <= 5) {
-                    setTags(prevTags => {
-                        const updatedTags = { ...prevTags, [editTag]: level };
-                        sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Only update sessionStorage when tags are updated
-                        return updatedTags;
+                    setskills(prevskills => {
+                        const updatedskills = { ...prevskills, [editskill]: level };
+                        sessionStorage.setItem('skills', JSON.stringify(updatedskills));
+                        return updatedskills;
                     });
                     setSkillLevel(0);
-                    setEditTag('');
+                    setEditskill('');
                 } else {
                     alert("Skill level must be between 0 and 5");
                 }
             } else if (text.trim() !== '') {
-                setTags(prevTags => {
-                    const updatedTags = { ...prevTags, [text.trim()]: 0 };
-                    sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Only update sessionStorage when tags are updated
-                    return updatedTags;
+                setskills(prevskills => {
+                    const updatedskills = { ...prevskills, [text.trim()]: 0 };
+                    sessionStorage.setItem('skills', JSON.stringify(updatedskills));
+                    return updatedskills;
                 });
                 setText('');
             }
         }
     };
 
-    const removeTag = (tag) => {
-        setTags(prevTags => {
-            const updatedTags = { ...prevTags };
-            delete updatedTags[tag];
-            sessionStorage.setItem('skills', JSON.stringify(updatedTags));  // Update sessionStorage after removing a tag
-            return updatedTags;
+    const removeskill = (skill) => {
+        setskills(prevskills => {
+            const updatedskills = { ...prevskills };
+            delete updatedskills[skill];
+            sessionStorage.setItem('skills', JSON.stringify(updatedskills));
+            return updatedskills;
         });
     };
 
     const handleComplete = async () => {
         try {
-            const postData = tags;
+            const postData = skills;
 
             const response = await fetch(`http://localhost:5000/developer/${userName}/skills`, {
                 method: "POST",
@@ -109,27 +109,27 @@ const AssessmentPage = ({ userName }) => {
     return (
         <Container className="mt-5">
             <Card body className="p-4 shadow-sm">
-                <h3 className="text-center">Tag Input</h3>
+                <h3 className="text-center">Self Assessment</h3>
                 <Form>
                     <FormGroup>
-                        <Label for="tagInput">Enter tags and press Enter:</Label>
+                        <Label for="skillInput">Enter Skills and press Enter:</Label>
                         <Input
                             type="text"
-                            id="tagInput"
+                            id="skillInput"
                             value={text}
-                            placeholder="Enter tags"
+                            placeholder="Enter Skills"
                             onChange={(e) => setText(e.target.value)}
                             onKeyDown={handleKeyDown}
                         />
                     </FormGroup>
                     <Row>
                         <Col>
-                            <h5 className="mt-3">Tags</h5>
-                            {Object.keys(tags).map((tag) => (
-                                <Row key={tag} className="align-items-center mb-2">
+                            <h5 className="mt-3">Skills</h5>
+                            {Object.keys(skills).map((skill) => (
+                                <Row key={skill} className="align-items-center mb-2">
                                     <Col>
-                                        <strong>{tag}:</strong>
-                                        {editTag === tag ? (
+                                        <strong>{skill}:</strong>
+                                        {editskill === skill ? (
                                             <Input
                                                 type="number"
                                                 value={skillLevel}
@@ -139,12 +139,12 @@ const AssessmentPage = ({ userName }) => {
                                                 max="5"
                                             />
                                         ) : (
-                                            ` ${tags[tag]}`
+                                            ` ${skills[skill]}`
                                         )}
                                     </Col>
                                     <Col xs="auto">
-                                        <Button size="sm" color="warning" onClick={() => { setEditTag(tag); setSkillLevel(tags[tag]); }}>Edit</Button>
-                                        <Button size="sm" color="danger" className="ms-2" onClick={() => removeTag(tag)}>Remove</Button>
+                                        <Button size="sm" color="warning" onClick={() => { setEditskill(skill); setSkillLevel(skills[skill]); }}>Edit</Button>
+                                        <Button size="sm" color="danger" className="ms-2" onClick={() => removeskill(skill)}>Remove</Button>
                                     </Col>
                                 </Row>
                             ))}
