@@ -4,6 +4,7 @@ import secrets
 import pymongo
 import datetime
 import logging
+import openai
 
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
@@ -50,3 +51,17 @@ def addUser(name, role, password):
         return Response([str(output.inserted_id), str(output.acknowledged)], status=200, mimetype='application/json')
     else:
         return Response("{'error':'User already exists'}", status=201, mimetype='application/json')
+    
+def queryGPT(user_query,dev_query=""):
+    client = openai.OpenAI(api_key="")
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "developer", "content": dev_query},
+            {
+                "role": "user",
+                "content": user_query
+            }
+        ]
+    )
+    return completion.choices[0].message
