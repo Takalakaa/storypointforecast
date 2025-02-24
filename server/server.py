@@ -1,27 +1,40 @@
 from flask import Flask, jsonify, request
-from flask_restful import Api, reqparse
+from flask_restful import Api
 from flask_cors import CORS
 import pymongo
-import pprint
-from developer_db_setup import init_developer_skills
-import json
 import hashlib
+import subprocess
 import utils
+import json
+from developer_db_setup import init_developer_skills
 
 app = Flask(__name__)
 api = Api(app)
 CORS(app)
+
 
 mongo_client = pymongo.MongoClient(utils.connection_string)
 db_access = mongo_client["db"]
 collection_access = db_access["profiles"]
 collection_access = db_access["collection"]
 
+# Utility function to run GitHub CLI commands
+def run_gh_command(command):
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        if result.returncode == 0:
+            return jsonify({"success": True, "data": json.loads(result.stdout.strip())})
+        else:
+            return jsonify({"success": False, "error": result.stderr.strip()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
 @app.route('/sample_connection', methods=['POST', 'GET'])
 def sample_connection():
-    # mongo_client = pymongo.MongoClient(utils.connection_string)
-    # db_access = mongo_client["db"]
-    # collection_access = db_access["collection"]
+    mongo_client = pymongo.MongoClient(utils.connection_string)
+    db_access = mongo_client["db"]
+    collection_access = db_access["collection"]
     if request.method == "POST":
         sample_data = {
             "author": "Mike",
@@ -187,6 +200,21 @@ def update_skill(name, skill):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+# get all pull request Code Changes curl http://127.0.0.1:5000/github/prs/Takalakaa/storypointforecast
+@app.route('/github/prs/<owner>/<repo>', methods=['GET'])
+def get_all_prs(owner, repo):
+    command = f"gh pr list --repo {owner}/{repo} --state all --json number,title,state,url"
+    return run_gh_command(command)
+
+
+# estimate story points curl http://127.0.0.1:5000/github/project/Takalakaa/3/estimates
+@app.route('/github/project/<owner>/<int:project_number>/estimates', methods=['GET'])
+def get_project_estimates(owner, project_number):
+    command = f"gh project item-list {project_number} --owner {owner} --format json"
+    return run_gh_command(command)
+
 
 @app.route('/developer/<name>/skills', methods=['POST']) 
 def update_skills(name):
