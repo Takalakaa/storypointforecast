@@ -188,6 +188,48 @@ def update_skill(name, skill):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/developer/<name>/skills', methods=['POST']) 
+def update_skills(name):
+    try:
+        mongo_client = pymongo.MongoClient(utils.connection_string)
+        db = mongo_client["db"]
+
+        data = request.json
+
+        if not isinstance(data, dict) or not data:
+            return jsonify({"error": "Invalid data format. Expected a dictionary of skills and values."}), 400
+        
+        for skill, value in data.items():
+            if not isinstance(value, int) or value < 0 or value > 5:
+                return jsonify({"error": f"Skill value for {skill} must be an integer between 0 and 5."}), 400
+
+        update_data = {skill.lower(): value for skill, value in data.items()}
+
+        developer = db.developerSkills.find_one({"name": name})
+
+        if developer:
+            db.developerSkills.update_one(
+                {"name": name},
+                {"$set": update_data}
+            )
+            message = "Skills updated successfully"
+        else:
+            db.developerSkills.insert_one({"name": name})
+            db.developerSkills.update_one(
+                {"name": name},
+                {"$set": update_data}
+            )
+            message = "Developer created and skills added successfully"
+
+        mongo_client.close()
+
+        return jsonify({
+            "message": message,
+            "updated_skills": update_data if developer else {**update_data, "name": name}
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     init_developer_skills()
