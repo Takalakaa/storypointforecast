@@ -12,6 +12,12 @@ app = Flask(__name__)
 api = Api(app)
 CORS(app)
 
+
+mongo_client = pymongo.MongoClient(utils.connection_string)
+db_access = mongo_client["db"]
+collection_access = db_access["profiles"]
+collection_access = db_access["collection"]
+
 # Utility function to run GitHub CLI commands
 def run_gh_command(command):
     try:
@@ -22,34 +28,6 @@ def run_gh_command(command):
             return jsonify({"success": False, "error": result.stderr.strip()})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
-
-
-# GitHub Repository Information
-@app.route('/github/repo/<owner>/<repo>', methods=['GET'])
-def get_repo_info(owner, repo):
-    command = f"gh repo view {owner}/{repo} --json name,description,url,owner"
-    return run_gh_command(command)
-
-
-# List Projects in a Repository
-@app.route('/github/projects/repo/<owner>/<repo>', methods=['GET'])
-def get_repo_projects(owner, repo):
-    command = f"gh project list --repo {owner}/{repo} --json number,title,url"
-    return run_gh_command(command)
-
-
-# List Projects in an Organization
-@app.route('/github/projects/org/<org>', methods=['GET'])
-def get_org_projects(org):
-    command = f"gh project list --org {org} --json number,title,url"
-    return run_gh_command(command)
-
-
-# Get Details of a Specific Project
-@app.route('/github/project/<owner>/<repo>/<int:project_number>', methods=['GET'])
-def get_project_details(owner, repo, project_number):
-    command = f"gh project view {project_number} --repo {owner}/{repo} --json title,url"
-    return run_gh_command(command)
 
 
 @app.route('/sample_connection', methods=['POST', 'GET'])
@@ -99,6 +77,60 @@ def login():
             return utils.logout(name, session_key)
     else:
         return "Hello World"
+    
+def seed_data():
+    if collection_access.count_documents({}) == 0:
+        initial_users = [
+            {
+                "username": "johndoe123",
+                "name": "John Doe",
+                "password": hashlib.sha512("password123".encode()).hexdigest(),
+                "role": "Developer",
+                "skills": [
+                    {"skill": "Java", "rank": 4},
+                    {"skill": "Python", "rank": 3},
+                    {"skill": "React", "rank": 5}
+                ]
+            },
+            {
+                "username": "admin01",
+                "name": "Admin User",
+                "password": hashlib.sha512("adminpass".encode()).hexdigest(),
+                "role": "Admin",
+                "skills": [
+                    {"skill": "Project Management", "rank": 5},
+                    {"skill": "Python", "rank": 2}
+                ]
+            },
+            {
+                "username": "pmuser",
+                "name": "Project Manager",
+                "password": hashlib.sha512("pmpass".encode()).hexdigest(),
+                "role": "Project Manager",
+                "skills": [
+                    {"skill": "Agile", "rank": 4},
+                    {"skill": "Communication", "rank": 5}
+                ]
+            }
+        ]
+        collection_access.insert_many(initial_users)
+
+@app.route('/profile/<username>', methods=['GET'])
+def get_profile(username):
+    user = collection_access.find_one({"username": username}, {"_id": 0})
+    if user:
+        return jsonify(user), 200
+    return jsonify({"error": "User not found"}), 404
+
+@app.route('/profile/<username>', methods=['PUT'])
+def update_profile(username):
+    data = request.get_json()
+    if 'password' in data:
+        data['password'] = hashlib.sha512(data['password'].encode()).hexdigest()
+    result = collection_access.update_one({"username": username}, {"$set": data}, upsert=True)
+    if result.matched_count:
+        return jsonify({"message": "Profile updated successfully"}), 200
+    return jsonify({"message": "Profile created successfully"}), 201
 
 
 @app.route('/developer/<name>', methods=['GET'])
@@ -183,4 +215,5 @@ def get_project_estimates(owner, project_number):
 
 if __name__ == '__main__':
     init_developer_skills()
+    seed_data()
     app.run(debug=True)
