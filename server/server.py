@@ -54,34 +54,33 @@ def signup():
     if request.method == "POST":
         data = request.get_json()
         name = data.get('name')
+        git_user = data.get('git_uname')
         role = data.get('role')
         password = data.get('password')
         password = password.encode()
         hashed_pass = hashlib.sha512(password).hexdigest()
         db.developerSkills.insert_one({"name": name})
-        return utils.addUser(name, role, hashed_pass)
+        return utils.addUser(name, role, hashed_pass, git_user)
 
     else:
         return "Hello World"
 
 
-@app.route('/login', methods=['POST', 'GET'])
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == "POST":
-        data = request.get_json()
-        action = data.get('action')
-        name = data.get('name')
-        if (action == 'login'):
-            password = data.get('password')
-            password = password.encode()
-            hashed_pass = hashlib.sha512(password).hexdigest()
-            return utils.login(name, hashed_pass)
-        else:
-            session_key = data.get('session_key')
-            return utils.logout(name, session_key)
+    data = request.get_json()
+    action = data.get('action')
+    name = data.get('name')
+    if (action == 'login'):
+        password = data.get('password')
+        password = password.encode()
+        hashed_pass = hashlib.sha512(password).hexdigest()
+        return utils.login(name, hashed_pass)
     else:
-        return "Hello World"
-    
+        session_key = data.get('session_key')
+        return utils.logout(name, session_key)
+
+
 def seed_data():
     if collection_access.count_documents({}) == 0:
         initial_users = [
@@ -121,20 +120,15 @@ def seed_data():
 
 @app.route('/profile/<username>', methods=['GET'])
 def get_profile(username):
-    user = collection_access.find_one({"username": username}, {"_id": 0})
-    if user:
-        return jsonify(user), 200
-    return jsonify({"error": "User not found"}), 404
+    return utils.getUser(username)
 
-@app.route('/profile/<username>', methods=['PUT'])
+@app.route('/profile/<username>', methods=['POST'])
 def update_profile(username):
     data = request.get_json()
-    if 'password' in data:
-        data['password'] = hashlib.sha512(data['password'].encode()).hexdigest()
-    result = collection_access.update_one({"username": username}, {"$set": data}, upsert=True)
-    if result.matched_count:
-        return jsonify({"message": "Profile updated successfully"}), 200
-    return jsonify({"message": "Profile created successfully"}), 201
+    name = data.get('name')
+    git_user = data.get('git_name')
+    role = data.get('role')
+    return utils.updateUser(name, role, git_user, username)
 
 
 @app.route('/developer/<name>', methods=['GET'])
