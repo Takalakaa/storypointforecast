@@ -5,11 +5,14 @@ import Login from "../Authentication/loginPage";
 import Signup from "../Authentication/signupPage";
 import MainNavbar from "../dashboard/Navbar";
 import SkillsDisplay from "./skillsDisplay.js";
-import { Profile } from  "./Profile.js"
+import AssessmentPage from "../assessment/AssessmentPage";
+import Dashboard from "./Dashboard.js";
+import ProfilePage from  "./Profile.js";
+
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
-  const [userName, setUserName] = useState("");  
-  const [userRole, setUserRole] = useState("");  
+  const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState("");
   const [accessLevel, setAccessLevel] = useState(0); // 0: no access | 1: developer | 2: manager | 3: admin
   const location = useLocation();
   const navigate = useNavigate();
@@ -21,22 +24,23 @@ const RouterComponent = () => {
     localStorage.setItem("name", name);
     localStorage.setItem("role", role);
     localStorage.setItem("authToken", authToken);
-    navigate("/"); 
+    navigate("/");
   };
 
   const handleLogout = () => {
     setToken(null);
-    setUserName("");  
-    handleRole("");  
+    setUserName("");
+    handleRole("");
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
+    sessionStorage.removeItem("skills");
     navigate("/login");
   };
 
   const handleRole = useCallback((role) => {
-    const accessLevelConfig = {"Developer": 1, "Project Manager": 2, "Admin": 3}
-    if(accessLevelConfig[role] != null) {
+    const accessLevelConfig = { "Developer": 1, "Project Manager": 2, "Admin": 3 }
+    if (accessLevelConfig[role] != null) {
       setAccessLevel(accessLevelConfig[role]);
       setUserRole(role);
     } else {
@@ -57,23 +61,24 @@ const RouterComponent = () => {
       setUserName(savedName);
       handleRole(savedRole);
     } else if (window.location.pathname === "/signup") {
-        // Do nothing
+      // Do nothing
     } else {
       navigate("/login"); // Redirect to /login if no token
     }
   }, [navigate, handleRole]);
 
   return (
-    <div className="container">
-      {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />} 
+    <div>
+      {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />}
       <Routes>
-        <Route path="/" element={<TestDisplay text={"HOME"} />} />
+        <Route path="/" element={<Dashboard userName={userName} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
+        <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<ProfilePage userName={userName} />} />
       </Routes>
     </div>
   );

@@ -1,31 +1,45 @@
-import { Link, useMatch, useResolvedPath } from "react-router-dom";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Navbar, NavbarBrand, Nav, NavItem, NavLink, Container } from 'reactstrap';
 
-export default function MainNavbar({ onLogout, accessLevel }) { 
+export default function MainNavbar({ onLogout, accessLevel }) {
   return (
-    <nav className="nav">
-      <Link to="/" className="site-title">
-        Story Point Forcaster
-      </Link>
-      <ul>
-        <CustomLink to="/project">Project</CustomLink>
-        {accessLevel > 1 && <CustomLink to="/compare">Compare</CustomLink>}
-        <CustomLink to="/skills">Skills</CustomLink>
-        <CustomLink to="/profile">Profile</CustomLink>
-        <Link to="/login" onClick={onLogout}>Logout</Link>
-      </ul>
-    </nav>
-  );
-}
+    <Navbar color="dark" dark expand="md" className="d-flex">
+      <Container className="d-flex justify-content-between">
+        <NavbarBrand tag={Link} to="/">
+          Story Point Forcaster
+        </NavbarBrand>
 
-function CustomLink({ to, children, ...props }) {
-  const resolvedPath = useResolvedPath(to);
-  const isActive = useMatch({ path: resolvedPath.pathname, end: true });
-
-  return (
-    <li className={isActive ? "active" : ""}>
-      <Link to={to} {...props}>
-        {children}
-      </Link>
-    </li>
+        <Nav className="d-flex" navbar>
+          <NavItem>
+            <NavLink tag={Link} to="/project">
+              Project
+            </NavLink>
+          </NavItem>
+          {accessLevel > 1 && (
+            <NavItem>
+              <NavLink tag={Link} to="/compare">
+                Compare
+              </NavLink>
+            </NavItem>
+          )}
+          <NavItem>
+            <NavLink tag={Link} to="/skills">
+              Skills
+            </NavLink>
+          </NavItem>
+          <NavItem>
+            <NavLink tag={Link} to="/profile">
+              Profile
+            </NavLink>
+          </NavItem>
+          <NavItem>
+            <NavLink tag={Link} to="/login" onClick={onLogout}>
+              Logout
+            </NavLink>
+          </NavItem>
+        </Nav>
+      </Container>
+    </Navbar>
   );
 }
