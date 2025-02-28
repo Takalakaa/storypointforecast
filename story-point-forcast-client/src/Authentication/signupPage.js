@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 export default function Signup({ onLogin }) {
     const baseUrl = "http://localhost:5000";
     const [username, setUsername] = useState("");
+    const [git_uname, setGitUname] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [role, setRole] = useState(null);
@@ -53,7 +54,7 @@ export default function Signup({ onLogin }) {
         const response = await fetch(route, {
             method: "POST",
             headers: { "Content-type": "application/json; charset=UTF-8" },
-            body: JSON.stringify({ name: username, password, role }),
+            body: JSON.stringify({ name: username, git_uname, password, role }),
         });
 
         if (response.status === 200) {
@@ -96,6 +97,16 @@ export default function Signup({ onLogin }) {
                                 id="username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                required
+                            />
+                        </FormGroup>
+                        <FormGroup className="mb-3">
+                            <Label htmlFor="git-uname">Github Username</Label>
+                            <Input
+                                type="text"
+                                id="git-uname"
+                                value={git_uname}
+                                onChange={(e) => setGitUname(e.target.value)}
                                 required
                             />
                         </FormGroup>
