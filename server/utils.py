@@ -217,20 +217,6 @@ def getUserCommitsInBranch(owner, repo, branch, user_id):
         return None
 
 def get_commit_additions(owner, repo, commit_sha):
-    """
-    Retrieves the files changed and their additions from a GitHub commit.
-
-    Args:
-        owner (str): The repository owner.
-        repo (str): The repository name.
-        commit_sha (str): The commit SHA.
-        token (str): Your GitHub personal access token.
-
-    Returns:
-        dict: A dictionary where keys are filenames and values are lists of added lines.
-        Returns None if an error occurs.
-    """
-
     url = f"https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}"
     headers = {
         "Authorization": f"token {githubToken}",
