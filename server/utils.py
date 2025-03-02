@@ -216,7 +216,7 @@ def getUserCommitsInBranch(owner, repo, branch, user_id):
         print(f"Request failed with status code {response.status_code}")
         return None
 
-def get_commit_additions(owner, repo, commit_sha):
+def getCommitAdditions(owner, repo, commit_sha):
     url = f"https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}"
     headers = {
         "Authorization": f"token {githubToken}",
