@@ -260,6 +260,7 @@ def update_skills(name):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    utils.setupAPITokens()
     init_developer_skills()
     seed_data()
     app.run(debug=True)
