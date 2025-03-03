@@ -9,14 +9,10 @@ def init_developer_skills():
         mongo_client = pymongo.MongoClient(utils.connection_string)
         db = mongo_client["db"]
 
-        # Drop collection if it exists
-        if "developerSkills" in db.list_collection_names():
-            db.developerSkills.drop()
-            print("developerSkills collection dropped")
-
-        # Create new collection
-        db.create_collection("developerSkills")
-        print("developerSkills collection created")
+        if "developerSkills" not in db.list_collection_names():
+            # Create new collection
+            db.create_collection("developerSkills")
+            print("developerSkills collection created")
 
         # Example initial documents with lowercase skills
         sample_developers = [
