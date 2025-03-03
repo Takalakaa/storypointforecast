@@ -1,9 +1,10 @@
-from flask import Flask, Response
+from flask import Flask, Response, jsonify
 from flask_restful import Resource, Api
 import secrets
 import pymongo
 import datetime
 import logging
+import json
 
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
@@ -34,6 +35,32 @@ def login(user, hashedPass):
     return [name, role, session_key]
 
 
+def getUser(username):
+    db = make_connection("users")
+    result = db.authentication.find_one({"name": username})
+    if result is None:
+        return Response("{'error':'User does not exist'}", status=201, mimetype='application/json')
+    else:
+        result.pop("_id")
+        result.pop("session_token")
+        result.pop("password")
+        return jsonify(result)
+
+
+
+def updateUser(name, role, git_name, active_user):
+    db = make_connection("users")
+    result = db.authentication.find_one({"name": active_user})
+    print(name)
+    if(result != None):
+        filter = {'name' : active_user}
+        newValues = { "$set": { 'name': name,'role' : role, 'git_name' : git_name } }
+        output = db.authentication.update_one(filter, newValues)
+        return Response([str(output.upserted_id), str(output.acknowledged)], status=200, mimetype='application/json')
+    else:
+        return Response("{'error':'User does not exist'}", status=201, mimetype='application/json')
+    
+
 def logout(user, session_key):
     db = make_connection("users")
     result = db.authentication.find({"name": user, "session_token": session_key})
@@ -42,11 +69,11 @@ def logout(user, session_key):
     db.authentication.find_one_and_replace({"name": user, "session_token": session_key},{"session_token": None})
     return True
 
-def addUser(name, role, password):
+def addUser(name, role, password, git_name):
     db = make_connection("users")
     result = db.authentication.find_one({"name": name, "role": role})
     if(result == None):
-        output = db.authentication.insert_one({"name": name, "password": password, "role": role})
+        output = db.authentication.insert_one({"name": name, "password": password, "role": role, "git_name": git_name})
         return Response([str(output.inserted_id), str(output.acknowledged)], status=200, mimetype='application/json')
     else:
         return Response("{'error':'User already exists'}", status=201, mimetype='application/json')
