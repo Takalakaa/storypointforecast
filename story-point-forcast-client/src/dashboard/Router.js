@@ -13,16 +13,19 @@ const RouterComponent = () => {
   const [token, setToken] = useState(null);
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
+  const [gitHub, setGitHub] = useState("");
   const [accessLevel, setAccessLevel] = useState(0); // 0: no access | 1: developer | 2: manager | 3: admin
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogin = (data) => {
-    const [name, role, authToken] = data;
+    const [name, role, gitHub, authToken] = data;
     setUserName(name);
+    setGitHub(gitHub);
     handleRole(role);
     localStorage.setItem("name", name);
     localStorage.setItem("role", role);
+    localStorage.setItem("gitHub", gitHub);
     localStorage.setItem("authToken", authToken);
     navigate("/");
   };
@@ -34,6 +37,7 @@ const RouterComponent = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
+    localStorage.removeItem("gitHub");
     sessionStorage.removeItem("skills");
     navigate("/login");
   };
@@ -71,7 +75,7 @@ const RouterComponent = () => {
     <div>
       {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />}
       <Routes>
-        <Route path="/" element={<Dashboard userName={userName} />} />
+        <Route path="/" element={<Dashboard userName={userName} gitHub={gitHub} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />

@@ -27,12 +27,13 @@ def login(user, hashedPass):
         return "0"
     name = result.get("name")
     role = result.get("role")
+    github = result.get("git_name")
     session_key = secrets.token_urlsafe(32)
     db.authentication.update_one(
         {"name": user},
         {"$set": {"session_token": session_key}}
     )
-    return [name, role, session_key]
+    return [name, role, github, session_key]
 
 
 def getUser(username):
