@@ -100,6 +100,31 @@ def queryGPT(user_query,dev_query=""):
     )
     return completion.choices[0].message
 
+
+def getDevSkills(name):
+  mongo_client = pymongo.MongoClient(connection_string)
+  db = mongo_client["db"]
+  developer = db.developerSkills.find_one({"name": name})
+  if developer:
+      # Remove the _id and name fields
+      developer.pop('_id', None)
+      developer.pop('name', None)
+      return jsonify(developer)
+  return jsonify({"error": "Developer not found"}), 404
+
+
+def adjustSkills(name, skillsDict):
+    mongo_client = pymongo.MongoClient(connection_string)
+    db = mongo_client["db"]
+    userCurrentSkills = getDevSkills(name)
+    filter = {'name' : name}
+    for key in skillsDict.keys():
+        if key.lower() in userCurrentSkills.keys():
+            db.developerSkills.update_one(filter, {"$set": {key.lower(): (0.8 * userCurrentSkills[key] + 0.2 * skillsDict[key])}})
+        else:
+            db.developerSkills.update_one(filter, {"$set": {key.lower(): skillsDict[key]}})
+            
+        
 def getAllRepos(username):
     query = """
     query GetUserRepos($username: String!) {

@@ -133,15 +133,7 @@ def update_profile(username):
 
 @app.route('/developer/<name>', methods=['GET'])
 def get_developer_skills(name):
-    mongo_client = pymongo.MongoClient(utils.connection_string)
-    db = mongo_client["db"]
-    developer = db.developerSkills.find_one({"name": name})
-    if developer:
-        # Remove the _id and name fields
-        developer.pop('_id', None)
-        developer.pop('name', None)
-        return jsonify(developer)
-    return jsonify({"error": "Developer not found"}), 404
+    return utils.getDevSkills(name)
 
 # Get specific skill value for a developer
 
@@ -258,3 +250,4 @@ if __name__ == '__main__':
     init_developer_skills()
     seed_data()
     app.run(debug=True)
+    
