@@ -218,11 +218,6 @@ def get_project_estimates(owner, project_number):
     return run_gh_command(command)
 
 
-@app.route('/github/prs/<owner>/<repo>/pull/<pr_id>', methods=['POST'])
-def analyze_pr(owner, repo, pr_id):
-    return jsonify({"message": f"Analyzing PR {pr_id} in {owner}/{repo}"}), 200
-
-
 @app.route('/developer/<name>/skills', methods=['POST']) 
 def update_skills(name):
     try:
