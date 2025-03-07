@@ -8,6 +8,8 @@ import openai
 import requests
 import json
 
+
+
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
 port = "27017"
@@ -126,40 +128,47 @@ def adjustSkills(name, skillsDict):
             
         
 def getAllRepos(username):
-    query = """
-    query GetUserRepos($username: String!) {
-      user(login: $username) {
-        repositories(privacy: PUBLIC, affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]) {
-          nodes {
-            nameWithOwner
-          }
-        }
-      }
-    }
-    """
+  try:
+        # API endpoint for user's contributed repositories
+        url = f"https://api.github.com/users/{username}/repos"
 
-    variables = {
-        "username": username
-    }
+        # Get all repositories including those contributed to
+        response = requests.get(url, params={"type": "all", "per_page": 100})
 
-    headers = {
-        'Authorization': f'Bearer {githubToken}',
-        'Content-Type': 'application/json'
-    }
+        if response.status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": f"GitHub API error: {response.status_code}"
+            })
 
-    response = requests.post('https://api.github.com/graphql', headers=headers, json={'query': query, 'variables': variables})
+        repos = response.json()
 
-    if response.status_code == 200:
-        data = response.json()
-        repositories = data.get('data', {}).get('user', {}).get('repositories', {}).get('nodes', [])
+        # Extract relevant repository information
+        repo_data = []
+        for repo in repos:
+            repo_info = {
+                "name": repo["name"],
+                "full_name": repo["full_name"],
+                "owner": repo["owner"]["login"],
+                "description": repo["description"],
+                "url": repo["html_url"],
+                "stars": repo["stargazers_count"],
+                "forks": repo["forks_count"],
+                "language": repo["language"]
+            }
+            repo_data.append(repo_info)
 
-        if repositories:
-            repo_list = [repo.get('nameWithOwner') for repo in repositories if repo.get('nameWithOwner')]
-            print(json.dumps(repo_list, indent=2))
-        else:
-            print("No repositories found.")
-    else:
-        print(f"Request failed with status code {response.status_code}")
+        return jsonify({
+            "success": True,
+            "data": repo_data,
+            "total_count": len(repo_data)
+        })
+
+  except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
 
 def getRepoContributorsAndBranches(owner, repo, githubToken):
     query = """
