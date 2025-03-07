@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Form, FormGroup, Label, Input, Button, Card, CardBody, Alert, ListGroup, ListGroupItem, Spinner } from "reactstrap";
+
+import { Container, Row, Col, Form, FormGroup, Label, Input, Button, Card, CardBody, Alert, ListGroup, ListGroupItem } from "reactstrap";
 
 const API_BASE_URL = "http://127.0.0.1:5000";
 
@@ -10,7 +11,6 @@ const PullRequestAnalysis = () => {
     const [selectedPr, setSelectedPr] = useState("");
     const [analysisResult, setAnalysisResult] = useState(null);
     const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const fetchPRs = async () => {
@@ -39,12 +39,9 @@ const PullRequestAnalysis = () => {
             return;
         }
 
-        setLoading(true);
+        const analyzeUrl = `http://github.com/${owner}/${repo}/pull/${selectedPr}`;
+
         setError(null);
-        setAnalysisResult(null);
-
-        const analyzeUrl = `${API_BASE_URL}/github/analyze_pr/${owner}/${repo}/${selectedPr}`;
-
         try {
             const response = await fetch(analyzeUrl);
             if (!response.ok) {
@@ -56,8 +53,6 @@ const PullRequestAnalysis = () => {
             setAnalysisResult(result);
         } catch (error) {
             setError(`Failed to analyze PR. Server Response: ${error.message}`);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -90,22 +85,11 @@ const PullRequestAnalysis = () => {
                                     )}
                                 </Input>
                             </FormGroup>
-                            <Button color="primary" block onClick={handleAnalyze} disabled={loading}>
-                                {loading ? <Spinner size="sm" /> : "Analyze PR"}
-                            </Button>
+                            <Button color="primary" block onClick={handleAnalyze}>Analyze PR</Button>
                         </Form>
                     </Card>
                 </Col>
             </Row>
-
-            {loading && (
-                <Row className="justify-content-center mt-4">
-                    <Col md={8} lg={6} className="text-center">
-                        <Spinner color="primary" />
-                        <p>Analyzing PR... Please wait.</p>
-                    </Col>
-                </Row>
-            )}
 
             {analysisResult && (
                 <Row className="justify-content-center mt-4">
@@ -113,16 +97,33 @@ const PullRequestAnalysis = () => {
                         <Card className="p-4 shadow-sm border-primary">
                             <CardBody>
                                 <h4 className="text-primary">Analysis Result</h4>
-                                <p><strong>Files Changed:</strong></p>
+                                <p><strong>Primary Languages Used:</strong> {analysisResult.languages.join(", ")}</p>
+                                <p><strong>Development Categories:</strong> {analysisResult.categories.join(", ")}</p>
+                                <p><strong>Key Software Development Updates:</strong></p>
                                 <ListGroup flush>
-                                    {analysisResult.files_changed.map((file, index) => (
-                                        <ListGroupItem key={index} className="border-0">{file}</ListGroupItem>
+                                    {analysisResult.changes.map((change, index) => (
+                                        <ListGroupItem key={index} className="border-0">{change}</ListGroupItem>
                                     ))}
                                 </ListGroup>
-                                <p><strong>GPT Analysis:</strong></p>
-                                <p>{analysisResult.gpt_analysis}</p>
                             </CardBody>
                         </Card>
+                    </Col>
+                </Row>
+            )}
+
+            {prs.length > 0 && (
+                <Row className="justify-content-center mt-5">
+                    <Col md={8} lg={6}>
+                        <h5 className="text-center">View PRs on GitHub</h5>
+                        <ListGroup flush className="shadow-sm">
+                            {prs.map(pr => (
+                                <ListGroupItem key={pr.number} className="border-0">
+                                    <a href={pr.url} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-bold">
+                                        PR #{pr.number} - {pr.title} ({pr.state.toUpperCase()})
+                                    </a>
+                                </ListGroupItem>
+                            ))}
+                        </ListGroup>
                     </Col>
                 </Row>
             )}
