@@ -9,7 +9,7 @@ import requests
 import json
 
 HEADSTRING = "mongodb://"
-base_url = "localhost:"
+base_url = "127.0.0.1:"
 port = "27017"
 
 githubToken = ""

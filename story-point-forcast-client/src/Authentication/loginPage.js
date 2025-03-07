@@ -14,7 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 export default function Login({ onLogin }) {
-  const baseUrl = "http://localhost:5000";
+  const baseUrl = "http://127.0.0.1:5000";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();

@@ -9,6 +9,10 @@ const Dashboard = ({userName}) => {
         navigate("/assessment");
     };
 
+    const handleNavigateToPullRequestAnalysis = () => {
+        navigate("/analyze_pr");
+    };
+
     return (
         <Container className="mt-5">
             <Row className="justify-content-center">
@@ -25,6 +29,16 @@ const Dashboard = ({userName}) => {
                                         onClick={handleNavigateToAssessment}
                                     >
                                         Go to Assessment Page
+                                    </Button>
+                                </Col>
+                            </Row>
+                            <Row className="text-center mt-4">
+                                <Col>
+                                    <Button
+                                        color="primary"
+                                        onClick={handleNavigateToPullRequestAnalysis}
+                                    >
+                                        Go to Pull Request Analysis Page
                                     </Button>
                                 </Col>
                             </Row>

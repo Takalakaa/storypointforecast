@@ -21,7 +21,7 @@ const AssessmentPage = ({ userName }) => {
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch(`http://localhost:5000/developer/${userName}`);
+            const response = await fetch(`http://127.0.0.1:5000/developer/${userName}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -84,7 +84,7 @@ const AssessmentPage = ({ userName }) => {
         try {
             const postData = skills;
 
-            const response = await fetch(`http://localhost:5000/developer/${userName}/skills`, {
+            const response = await fetch(`http://127.0.0.1:5000/developer/${userName}/skills`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

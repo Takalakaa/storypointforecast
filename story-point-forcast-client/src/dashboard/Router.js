@@ -8,6 +8,7 @@ import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
 import Dashboard from "./Dashboard.js";
 import ProfilePage from  "./Profile.js";
+import PullRequestAnalysis from "./PullRequestAnalysis.js";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -79,6 +80,7 @@ const RouterComponent = () => {
         <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
         <Route path="/profile" element={<ProfilePage userName={userName} />} />
+        <Route path="/analyze_pr" element={<PullRequestAnalysis userName={userName}/>}/>
       </Routes>
     </div>
   );

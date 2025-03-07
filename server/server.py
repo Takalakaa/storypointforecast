@@ -15,8 +15,8 @@ CORS(app)
 
 mongo_client = pymongo.MongoClient(utils.connection_string)
 db_access = mongo_client["db"]
-collection_access = db_access["profiles"]
-collection_access = db_access["collection"]
+# collection_access = db_access["profiles"]
+# collection_access = db_access["collection"]
 
 # Utility function to run GitHub CLI commands
 def run_gh_command(command):
@@ -82,6 +82,8 @@ def login():
 
 
 def seed_data():
+    db = mongo_client["users"]
+    collection_access = db["users"]  
     if collection_access.count_documents({}) == 0:
         initial_users = [
             {
@@ -117,6 +119,7 @@ def seed_data():
             }
         ]
         collection_access.insert_many(initial_users)
+        mongo_client.close()
 
 @app.route('/profile/<username>', methods=['GET'])
 def get_profile(username):
@@ -208,6 +211,11 @@ def get_all_prs(owner, repo):
 def get_project_estimates(owner, project_number):
     command = f"gh project item-list {project_number} --owner {owner} --format json"
     return run_gh_command(command)
+
+
+@app.route('/github/prs/<owner>/<repo>/pull/<pr_id>', methods=['POST'])
+def analyze_pr(owner, repo, pr_id):
+    return jsonify({"message": f"Analyzing PR {pr_id} in {owner}/{repo}"}), 200
 
 
 @app.route('/developer/<name>/skills', methods=['POST']) 

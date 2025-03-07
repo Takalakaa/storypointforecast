@@ -21,7 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 export default function Signup({ onLogin }) {
-    const baseUrl = "http://localhost:5000";
+    const baseUrl = "http://127.0.0.1:5000";
     const [username, setUsername] = useState("");
     const [git_uname, setGitUname] = useState("");
     const [password, setPassword] = useState("");
