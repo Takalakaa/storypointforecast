@@ -7,6 +7,7 @@ import subprocess
 import utils
 import json
 from developer_db_setup import init_developer_skills
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 api = Api(app)
@@ -19,15 +20,24 @@ collection_access = db_access["profiles"]
 collection_access = db_access["collection"]
 
 # Utility function to run GitHub CLI commands
+
+
 def run_gh_command(command):
     try:
-        result = subprocess.run(command, capture_output=True, text=True, shell=True)
+        result = subprocess.run(
+            command, capture_output=True, text=True, shell=True)
         if result.returncode == 0:
             return jsonify({"success": True, "data": json.loads(result.stdout.strip())})
         else:
             return jsonify({"success": False, "error": result.stderr.strip()})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+
+@app.route('/github/contributions/<username>')
+def get_user_contributions(username):
+    return utils.getAllRepos(username)
+    
 
 
 @app.route('/sample_connection', methods=['POST', 'GET'])
@@ -118,9 +128,23 @@ def seed_data():
         ]
         collection_access.insert_many(initial_users)
 
+
 @app.route('/profile/<username>', methods=['GET'])
 def get_profile(username):
     return utils.getUser(username)
+
+
+@app.route('/gitUserName/<username>', methods=['GET'])
+def get_gitUser(username):
+    mongo_client = pymongo.MongoClient(utils.connection_string)
+    db = mongo_client["users"]
+    user_data = db.authentication.find_one({"name": username})
+
+    if user_data:
+        return user_data["git_name"]
+    else:
+        return ""
+
 
 @app.route('/profile/<username>', methods=['POST'])
 def update_profile(username):
@@ -186,7 +210,7 @@ def update_skill(name, skill):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 
 # get all pull request Code Changes curl http://127.0.0.1:5000/github/prs/Takalakaa/storypointforecast
 @app.route('/github/prs/<owner>/<repo>', methods=['GET'])
@@ -202,7 +226,7 @@ def get_project_estimates(owner, project_number):
     return run_gh_command(command)
 
 
-@app.route('/developer/<name>/skills', methods=['POST']) 
+@app.route('/developer/<name>/skills', methods=['POST'])
 def update_skills(name):
     try:
         mongo_client = pymongo.MongoClient(utils.connection_string)
@@ -212,7 +236,7 @@ def update_skills(name):
 
         if not isinstance(data, dict) or not data:
             return jsonify({"error": "Invalid data format. Expected a dictionary of skills and values."}), 400
-        
+
         for skill, value in data.items():
             if not isinstance(value, int) or value < 0 or value > 5:
                 return jsonify({"error": f"Skill value for {skill} must be an integer between 0 and 5."}), 400
@@ -244,6 +268,7 @@ def update_skills(name):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     utils.setupAPITokens()
