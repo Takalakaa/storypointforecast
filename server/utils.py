@@ -1,7 +1,6 @@
 from flask import Flask, Response
 from flask_restful import Resource, Api
 import secrets
-# import pymongo
 import datetime
 import logging
 import openai
