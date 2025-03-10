@@ -6,6 +6,7 @@ import logging
 import openai
 import requests
 import json
+import pymongo
 
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
@@ -55,9 +56,12 @@ def addUser(name, role, password):
     else:
         return Response("{'error':'User already exists'}", status=201, mimetype='application/json')
 
+
 def setupAPITokens():
-    githubToken = input("Please enter your GitHub API token")
-    # GPTAPIToken = input("Please enter your GPT API token")
+    githubToken = input("Please enter your GitHub API token: ")
+    GPTAPIToken = input("Please enter your GPT API token: ")
+    return githubToken, GPTAPIToken
+
 
 def queryGPT(user_query,dev_query=""):
     client = openai.OpenAI(api_key=GPTAPIToken)
@@ -330,27 +334,34 @@ def getPRAuthors(owner, repo, pr_number):
         return None
 
 def analyzePRCommits(commitData):
-    all_categories = []
-    dev_query = "Analyze the following list of code additions from a GitHub commit and categorize them based on specific technologies, programming languages, or fields (e.g., Python, React, DevOps, Security, Database, Testing). Do not include general terms like 'programming languages,' 'frameworks,' or 'libraries.' Return exactly 5–10 relevant categories in a CSV format, with no extra text or formatting."
-
+    category_skill_map = {}
+    dev_query = (
+        "Analyze the following list of code additions from a GitHub commit. "
+        "Categorize them based on specific technologies, programming languages, or fields "
+        "(e.g., Python, React, DevOps, Security, Database, Testing). "
+        "For each category, also assess the skill level demonstrated on a scale of 1-5, "
+        "where 1 is beginner and 5 is expert. "
+        "Return the results in CSV format as 'category, skill_level' with no extra text or formatting."
+    )
+    
     for commit in commitData:
         additions_text = ""
         for file, lines in commit["additions"].items():
             additions_text += f"File: {file}\n"
             for line in lines:
                 additions_text += f"+ {line}\n"
-
+        
         if additions_text:
             gpt_response = queryGPT(additions_text, dev_query)
             if gpt_response:
-                categories = [cat.strip() for cat in gpt_response.split(",")]
-                all_categories.extend(categories)
-
-    unique_categories = []
-    seen = set()
-    for category in all_categories:
-        if category not in seen:
-            unique_categories.append(category)
-            seen.add(category)
-
-    return unique_categories
+                for row in gpt_response.split("\n"):
+                    parts = row.split(",")
+                    if len(parts) == 2:
+                        category = parts[0].strip()
+                        try:
+                            skill_level = int(parts[1].strip())
+                            category_skill_map[category] = skill_level
+                        except ValueError:
+                            continue
+    
+    return category_skill_map
