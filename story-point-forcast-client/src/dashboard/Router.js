@@ -8,31 +8,34 @@ import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
 import Dashboard from "./Dashboard.js";
 import ProfilePage from  "./Profile.js";
+import ProjectView from "./ProjectView.js";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
-  const [gitHub, setGitHub] = useState("");
+  const [gitName, setGitName] = useState("");
   const [accessLevel, setAccessLevel] = useState(0); // 0: no access | 1: developer | 2: manager | 3: admin
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogin = (data) => {
-    const [name, role, gitHub, authToken] = data;
+    const [name, role, gitName, authToken] = data;
     setUserName(name);
-    setGitHub(gitHub);
+    setGitName(gitName);
     handleRole(role);
     localStorage.setItem("name", name);
     localStorage.setItem("role", role);
     localStorage.setItem("gitHub", gitHub);
     localStorage.setItem("authToken", authToken);
     navigate("/");
+   
   };
 
   const handleLogout = () => {
     setToken(null);
     setUserName("");
+    setGitName("");
     handleRole("");
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
@@ -75,10 +78,10 @@ const RouterComponent = () => {
     <div>
       {!hideNavbar && <MainNavbar token={token} accessLevel={accessLevel} onLogout={handleLogout} />}
       <Routes>
-        <Route path="/" element={<Dashboard userName={userName} gitHub={gitHub} />} />
+        <Route path="/" element={<Dashboard userName={userName} gitHub={gitName} />} />
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route path="/project" element={<TestDisplay text={"PROJECT"} />} />
+        <Route path="/project" element={<ProjectView userName={userName} />} />
         {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
         <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />

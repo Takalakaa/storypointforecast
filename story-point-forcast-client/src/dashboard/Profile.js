@@ -4,9 +4,9 @@ import { Button, Form, FormGroup, Label, Input, Table } from 'reactstrap';
 export default function ProfilePage({userName}) {
   const [profile, setProfile] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [newName, setName] = useState();
-  const [gitName, setGitName] = useState();
-  const [role, setRole] = useState();
+  const [newName, setName] = useState("");
+  const [gitName, setGitName] = useState("");
+  const [role, setRole] = useState("");
   const username = userName;
 
   useEffect(() => {
@@ -26,10 +26,12 @@ export default function ProfilePage({userName}) {
     const response = await fetch(`http://127.0.0.1:5000/profile/${username}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"name": newName, "git_name": gitName, "role": role}),
+      body: JSON.stringify({"name": (newName != "") ? newName : profile.name, "git_name": (gitName != "") ? gitName : profile.gitName , "role": (role != "") ? role : profile.role}),
     })
     if (response.status === 200) {
       setEditMode(false);
+      localStorage.setItem("name", (newName != "") ? newName : profile.name);
+      localStorage.setItem("role", (role != "") ? role : profile.role);
     } else {
       console.error("Update failed:", response.status);
     }
@@ -43,15 +45,15 @@ export default function ProfilePage({userName}) {
       <Form>
         <FormGroup>
           <Label>Github Username:</Label>
-          <Input type="text" name="git_username" onChange={(e) => setGitName(e.target.value)} value={gitName} disabled={!editMode} />
+          <Input type="text" name="git_username" onChange={(e) => setGitName(e.target.value)} placeholder={profile.git_name} value={gitName} disabled={!editMode} />
         </FormGroup>
         <FormGroup>
           <Label>Username:</Label>
-          <Input type="text" name="username" onChange={(e) => setName(e.target.value)} value={newName} disabled={!editMode} />
+          <Input type="text" name="username" onChange={(e) => setName(e.target.value)} placeholder={profile.name} value={newName} disabled={!editMode} />
         </FormGroup>
         <FormGroup>
           <Label>Role:</Label>
-          <Input type="text" name="role" onChange={(e) => setRole(e.target.value)} value={role} disabled={!editMode} />
+          <Input type="text" name="role" onChange={(e) => setRole(e.target.value)} placeholder={profile.role} value={role} disabled={!editMode} />
         </FormGroup>
 
         {editMode ? (
