@@ -26,7 +26,7 @@ const RouterComponent = () => {
     handleRole(role);
     localStorage.setItem("name", name);
     localStorage.setItem("role", role);
-    localStorage.setItem("gitHub", gitHub);
+    localStorage.setItem("gitName", gitName);
     localStorage.setItem("authToken", authToken);
     navigate("/");
    
@@ -40,7 +40,7 @@ const RouterComponent = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("name");
     localStorage.removeItem("role");
-    localStorage.removeItem("gitHub");
+    localStorage.removeItem("gitName");
     sessionStorage.removeItem("skills");
     navigate("/login");
   };
@@ -62,11 +62,13 @@ const RouterComponent = () => {
     const savedToken = localStorage.getItem("authToken");
     const savedName = localStorage.getItem("name");
     const savedRole = localStorage.getItem("role");
+    const savedGitName = localStorage.getItem("gitName");
     if (savedToken && savedName && savedRole) {
       // Authenticate token  
       setToken(savedToken);
       setUserName(savedName);
       handleRole(savedRole);
+      savedGitName ? setGitName(savedGitName) : setGitName("")
     } else if (window.location.pathname === "/signup") {
       // Do nothing
     } else {

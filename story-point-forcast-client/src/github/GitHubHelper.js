@@ -1,44 +1,20 @@
 export const fetchGitHubProjects = async (gitHub) => {
-    if (!gitHub) return [];
-
-    let page = 1;
-    let contributedProjects = new Set();
-    let moreData = true;
-
-    // Fetch all events -- limit 90 days i think
-    while (moreData) {
-        try {
-            const response = await fetch(`https://api.github.com/users/${gitHub}/events?page=${page}`);
-            if (response.status === 304) break;
-
-            const events = await response.json();
-            if (!Array.isArray(events) || events.length === 0) {
-                moreData = false;
-                break;
-            }
-
-            events.forEach(event => {
-                if (event.type === "PushEvent") {
-                    contributedProjects.add(event.repo.name);
-                }
-            });
-
-            page++;
-        } catch (error) {
-            console.error("Error fetching GitHub events:", error);
-            break;
-        }
-    }
-
-    // Fetch public repositories
     try {
-        const publicReposResponse = await fetch(`https://api.github.com/users/${gitHub}/repos`);
-        const publicRepos = await publicReposResponse.json();
+        const response = await fetch(`http://127.0.0.1:5000/github/contributions/${gitHub}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
 
-        publicRepos.forEach(repo => contributedProjects.add(repo.full_name));
-    } catch (error) {
-        console.error("Error fetching public repos:", error);
+        const data = await response.json();
+
+        if (data.success) {
+            return data.data; // Return the projects array
+        } else {
+            throw new Error(data.error || 'Failed to fetch contributions');
+        }
+    } catch (err) {
+        console.error(err.message || 'An error occurred while fetching contributions');
+        return []; 
     }
-
-    return Array.from(contributedProjects).map(name => ({ name }));
 };
