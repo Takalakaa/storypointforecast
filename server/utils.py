@@ -1,12 +1,12 @@
 from flask import Flask, Response, jsonify
 from flask_restful import Resource, Api
 import secrets
-import pymongo
 import datetime
 import logging
 import openai
 import requests
 import json
+import pymongo
 
 
 
@@ -84,9 +84,12 @@ def addUser(name, role, password, git_name):
     else:
         return Response("{'error':'User already exists'}", status=201, mimetype='application/json')
 
+
 def setupAPITokens():
-    githubToken = input("Please enter your GitHub API token")
-    # GPTAPIToken = input("Please enter your GPT API token")
+    githubToken = input("Please enter your GitHub API token: ")
+    GPTAPIToken = input("Please enter your GPT API token: ")
+    return githubToken, GPTAPIToken
+
 
 def queryGPT(user_query,dev_query=""):
     client = openai.OpenAI(api_key=GPTAPIToken)
@@ -100,7 +103,7 @@ def queryGPT(user_query,dev_query=""):
             }
         ]
     )
-    return completion.choices[0].message
+    return completion.choices[0].message.content
 
 
 def getDevSkills(name):
@@ -170,7 +173,7 @@ def getAllRepos(username):
             "error": str(e)
         })
 
-def getRepoContributorsAndBranches(owner, repo, githubToken):
+def getRepoContributorsAndBranches(owner, repo):
     query = """
     query GetRepoContributorsAndBranches($owner: String!, $repo: String!) {
       repository(owner: $owner, name: $repo) {
@@ -309,5 +312,116 @@ def getCommitAdditions(owner, repo, commit_sha):
         print(f"Error decoding JSON response: {e}")
         return None
 
-def categorizeChangs():
-    return
+def getPRCommitAdditions(owner, repo, pr_number, author_username=None):
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/commits"
+    headers = {
+        "Authorization": f"token {githubToken}",
+        "Accept": "application/vnd.github+json",
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        commits = response.json()
+        filtered_commits = []
+
+        for commit in commits:
+            author = commit.get("author")
+            if author_username is None or (author and author["login"] == author_username):
+                filtered_commits.append(commit)
+
+        all_commit_additions = []
+        for commit in filtered_commits:
+            commit_sha = commit["sha"]
+            commit_url = f"https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}"
+            commit_response = requests.get(commit_url, headers=headers)
+            commit_response.raise_for_status()
+            commit_data = commit_response.json()
+            files = commit_data.get("files", [])
+
+            file_additions = {}
+            for file in files:
+                patch = file.get("patch")
+                if patch:
+                    lines = patch.splitlines()
+                    added_lines = [line[1:] for line in lines if line.startswith("+") and not line.startswith("+++")]
+                    file_additions[file["filename"]] = added_lines
+            all_commit_additions.append({
+                "sha": commit_sha,
+                "additions": file_additions
+            })
+
+        return all_commit_additions
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching PR commit data: {e}")
+        return None
+    except KeyError as e:
+        print(f"Error parsing PR commit data: Missing key {e}")
+        return None
+    except ValueError as e:
+        print(f"Error decoding JSON response: {e}")
+        return None
+
+def getPRAuthors(owner, repo, pr_number):
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/commits"
+    headers = {
+        "Authorization": f"token {githubToken}",
+        "Accept": "application/vnd.github+json",
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        commits = response.json()
+
+        authors = set()
+        for commit in commits:
+            author = commit.get("author")
+            if author:
+                authors.add(author["login"])
+
+        return sorted(list(authors))
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching PR commit data: {e}")
+        return None
+    except KeyError as e:
+        print(f"Error parsing PR commit data: Missing key {e}")
+        return None
+    except ValueError as e:
+        print(f"Error decoding JSON response: {e}")
+        return None
+
+def analyzePRCommits(commitData):
+    category_skill_map = {}
+    dev_query = (
+        "Analyze the following list of code additions from a GitHub commit. "
+        "Categorize them based on specific technologies, programming languages, or fields "
+        "(e.g., Python, React, DevOps, Security, Database, Testing). "
+        "For each category, also assess the skill level demonstrated on a scale of 1-5, "
+        "where 1 is beginner and 5 is expert. "
+        "Return the results in CSV format as 'category, skill_level' with no extra text or formatting."
+    )
+    
+    for commit in commitData:
+        additions_text = ""
+        for file, lines in commit["additions"].items():
+            additions_text += f"File: {file}\n"
+            for line in lines:
+                additions_text += f"+ {line}\n"
+        
+        if additions_text:
+            gpt_response = queryGPT(additions_text, dev_query)
+            if gpt_response:
+                for row in gpt_response.split("\n"):
+                    parts = row.split(",")
+                    if len(parts) == 2:
+                        category = parts[0].strip()
+                        try:
+                            skill_level = int(parts[1].strip())
+                            category_skill_map[category] = skill_level
+                        except ValueError:
+                            continue
+    
+    return category_skill_map
