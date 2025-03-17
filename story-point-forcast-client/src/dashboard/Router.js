@@ -8,6 +8,7 @@ import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
 import Dashboard from "./Dashboard.js";
 import ProfilePage from  "./Profile.js";
+import ComparisonPage from "../comparison/ComparisonPage.js";
 import ProjectView from "./ProjectView.js";
 
 const RouterComponent = () => {
@@ -84,7 +85,7 @@ const RouterComponent = () => {
         <Route path="/signup" element={<Signup onLogin={handleLogin} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/project" element={<ProjectView userName={userName} />} />
-        {accessLevel > 1 && <Route path="/compare" element={<TestDisplay text={"COMPARE"} />} />}
+        {accessLevel > 1 && <Route path="/compare" element={<ComparisonPage />} />}
         <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
         <Route path="/profile" element={<ProfilePage userName={userName} />} />
