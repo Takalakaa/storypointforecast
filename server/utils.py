@@ -125,14 +125,12 @@ def getDevSkills(name):
 
 
 def adjustSkills(name, skillsDict):
-    """Updated version that handles the Response object properly and sanitizes keys"""
+
     mongo_client = pymongo.MongoClient(connection_string)
     db = mongo_client["db"]
 
-    # Get current skills directly from database
     current_skills_doc = db.developerSkills.find_one({"name": name})
 
-    # Sanitize keys to be MongoDB-safe (replace dots with underscores)
     sanitized_skills = {}
     for key, value in skillsDict.items():
         # Replace dots and other problematic characters
