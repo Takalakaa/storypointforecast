@@ -10,13 +10,13 @@ export default function ProjectView({userName}) {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showToast, setShowToast] = useState(false);
   
-  const handleAnalyze = (repoName, username) => {
+  const handleAnalyze = (owner, repoName, username) => {
     setAnalyzing(true);
     setShowToast(false);
     setAnalysisResult(null);
     
-    console.log(`Analyzing: ${repoName} for user ${username}`);
-    fetch(`http://127.0.0.1:5000/github/analyze/${encodeURIComponent(repoName)}/${encodeURIComponent(username)}`, {
+    console.log(`Analyzing: ${owner}/${repoName} for user ${username}`);
+    fetch(`http://127.0.0.1:5000/github/analyze/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/${encodeURIComponent(username)}`, {
       method: 'POST',
     })
       .then(response => {
@@ -159,7 +159,7 @@ export default function ProjectView({userName}) {
                   <td>
                     <button
                       className="btn btn-sm btn-primary"
-                      onClick={() => handleAnalyze(repo.name, gitName)}
+                      onClick={() => handleAnalyze(repo.owner, repo.name, gitName)}
                     >
                       Analyze
                     </button>
