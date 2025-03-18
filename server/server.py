@@ -37,24 +37,6 @@ def run_gh_command(command):
 @app.route('/github/contributions/<username>')
 def get_user_contributions(username):
     return utils.getAllRepos(username)
-    
-
-
-@app.route('/sample_connection', methods=['POST', 'GET'])
-def sample_connection():
-    mongo_client = pymongo.MongoClient(utils.connection_string)
-    db_access = mongo_client["db"]
-    collection_access = db_access["collection"]
-    if request.method == "POST":
-        sample_data = {
-            "author": "Mike",
-            "text": "My first blog post!",
-            "tags": ["mongodb", "python", "pymongo"],
-        }
-        response = str(collection_access.insert_one(sample_data).inserted_id)
-        return response
-    else:
-        return str(collection_access.find_one())
 
 
 @app.route('/signup', methods=['POST', 'GET'])
@@ -270,9 +252,203 @@ def update_skills(name):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/github/analyze/<repo>/<username>', methods=['POST'])
+def analyze_repository(repo, username):
+    try:
+        # For this simplified version, we'll assume the username is also the owner
+        owner = username
+
+        # Get all PRs for the repo
+        command = f"gh pr list --repo {owner}/{repo} --state all --json number --author {username}"
+        pr_response = run_gh_command(command)
+
+        all_commit_data = []
+
+        if pr_response.json.get('success'):
+            pr_data = pr_response.json.get('data', [])
+            pr_numbers = [pr['number'] for pr in pr_data]
+
+            # For each PR, get commit data
+            for pr_number in pr_numbers:
+                commit_data = utils.getPRCommitAdditions(
+                    owner, repo, pr_number, username)
+                if commit_data:
+                    all_commit_data.extend(commit_data)
+
+        # If no PRs or commits found, try getting direct commits
+        if not all_commit_data:
+            # Get repository contributors and branches
+            repo_info = utils.getRepoContributorsAndBranches(owner, repo)
+
+            if repo_info:
+                # Find the user's ID
+                user_id = None
+                for contributor in repo_info.get('contributors', []):
+                    if contributor.get('login') == username:
+                        user_id = contributor.get('id')
+                        break
+
+                # Get commits from the branches
+                if user_id and repo_info.get('branches'):
+                    for branch in repo_info.get('branches'):
+                        commits = utils.getUserCommitsInBranch(
+                            owner, repo, branch, user_id)
+                        if commits:
+                            for commit in commits:
+                                commit_sha = commit.get('oid')
+                                additions = utils.getCommitAdditions(
+                                    owner, repo, commit_sha)
+                                if additions:
+                                    all_commit_data.append({
+                                        "sha": commit_sha,
+                                        "additions": additions
+                                    })
+
+        # Analyze the commit data
+        if all_commit_data:
+            skill_analysis = utils.analyzePRCommits(all_commit_data)
+
+            # Get the user's actual name from their git username
+            mongo_client = pymongo.MongoClient(utils.connection_string)
+            db = mongo_client["users"]
+            user_data = db.authentication.find_one({"git_name": username})
+
+            if user_data and user_data.get("name"):
+                # Update skills
+                utils.adjustSkills(user_data.get("name"), skill_analysis)
+
+            return jsonify({
+                "success": True,
+                "user": username,
+                "repository": repo,
+                "analysis": skill_analysis,
+                "commits_analyzed": len(all_commit_data)
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "No commits found for analysis"
+            })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+
+@app.route('/github/test-token', methods=['GET'])
+def test_github_token():
+    """Simple endpoint to test if GitHub token is valid"""
+    try:
+        import requests
+        # Try the REST API first (uses 'token' prefix)
+        headers_rest = {
+            'Authorization': f'token {utils.githubToken}',
+            'Accept': 'application/vnd.github+json'
+        }
+
+        # Get authenticated user info - simple API call
+        response = requests.get(
+            'https://api.github.com/user', headers=headers_rest)
+
+        if response.status_code == 200:
+            user_data = response.json()
+            return jsonify({
+                "success": True,
+                "message": "Token is valid for REST API",
+                "user": user_data.get('login'),
+                "token_type": "REST API (token prefix)"
+            })
+
+        # If that fails, try GraphQL API with 'bearer' prefix
+        headers_graphql = {
+            'Authorization': f'Bearer {utils.githubToken}',
+            'Content-Type': 'application/json'
+        }
+
+        query = """
+        query { 
+            viewer { 
+                login
+            }
+        }
+        """
+
+        response = requests.post(
+            'https://api.github.com/graphql',
+            headers=headers_graphql,
+            json={'query': query}
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if 'errors' not in data:
+                return jsonify({
+                    "success": True,
+                    "message": "Token is valid for GraphQL API",
+                    "user": data.get('data', {}).get('viewer', {}).get('login'),
+                    "token_type": "GraphQL API (bearer prefix)"
+                })
+
+        # Both methods failed - show detailed error info
+        return jsonify({
+            "success": False,
+            "rest_status": response.status_code,
+            "rest_response": response.text,
+            "message": "GitHub token validation failed for both REST and GraphQL APIs",
+            "token_length": len(utils.githubToken) if utils.githubToken else 0,
+            "token_starts_with": utils.githubToken[:4] + "..." if utils.githubToken and len(utils.githubToken) > 4 else None
+        })
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
+
+
+@app.route('/github/cli-test', methods=['GET'])
+def test_github_cli():
+    """Test if GitHub CLI is properly authenticated"""
+    try:
+        import subprocess
+
+        # Check if gh is installed and authenticated
+        result = subprocess.run(
+            "gh auth status",
+            capture_output=True,
+            text=True,
+            shell=True
+        )
+
+        if result.returncode == 0:
+            return jsonify({
+                "success": True,
+                "message": "GitHub CLI is authenticated",
+                "details": result.stdout
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "GitHub CLI authentication issue",
+                "error": result.stderr,
+                "exit_code": result.returncode
+            })
+
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
+
+
 if __name__ == '__main__':
-    utils.setupAPITokens()
     init_developer_skills()
     seed_data()
+    utils.setupAPITokens()
     app.run(debug=True)
-    

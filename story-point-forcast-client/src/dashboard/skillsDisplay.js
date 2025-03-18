@@ -27,8 +27,22 @@ const getColorFromHash = (hash) => {
     const r = (hash & 0xFF0000) >> 16;
     const g = (hash & 0x00FF00) >> 8;
     const b = hash & 0x0000FF;
-
-    return `rgb(${(r % 255)}, ${(g % 255)}, ${(b % 255)})`;
+    
+    // Make sure we don't get white or very light colors
+    const minValue = 30;  // Min RGB value to ensure some color
+    const maxValue = 220; // Max RGB value to ensure not too light
+    
+    const adjustedR = Math.max(minValue, Math.min(maxValue, r % 255));
+    const adjustedG = Math.max(minValue, Math.min(maxValue, g % 255));
+    const adjustedB = Math.max(minValue, Math.min(maxValue, b % 255));
+    
+    // Ensure we don't get close to white (where all values are high)
+    if (adjustedR > 180 && adjustedG > 180 && adjustedB > 180) {
+        // Reduce one of the values to make the color more distinct
+        return `rgb(${adjustedR - 100}, ${adjustedG}, ${adjustedB})`;
+    }
+    
+    return `rgb(${adjustedR}, ${adjustedG}, ${adjustedB})`;
 };
 
 const SkillsDisplay = ({ userName }) => {
@@ -86,6 +100,12 @@ const SkillsDisplay = ({ userName }) => {
             return Object.keys(developerData).map((skill, index) => {
                 const hash = generateHash(skill);
                 const color = getColorFromHash(hash);
+                
+                // Format the skill level to have 1 decimal place
+                const skillValue = developerData[skill];
+                const formattedSkillValue = typeof skillValue === 'number' 
+                    ? parseFloat(skillValue.toFixed(1)) 
+                    : skillValue;
 
                 return (
                     <Col key={index} sm="12" md="4" className="mb-4">
@@ -98,7 +118,7 @@ const SkillsDisplay = ({ userName }) => {
                             <CardBody>
                                 <CardTitle tag="h5">{skill.charAt(0).toUpperCase() + skill.slice(1)}</CardTitle>
                                 <CardText>
-                                    Skill Level: {developerData[skill]} / 5
+                                    Skill Level: {formattedSkillValue} / 5
                                 </CardText>
                             </CardBody>
                         </Card>
