@@ -9,7 +9,6 @@ import json
 import pymongo
 
 
-
 HEADSTRING = "mongodb://"
 base_url = "localhost:"
 port = "27017"
@@ -21,10 +20,12 @@ connection_string = HEADSTRING + base_url + port
 
 logger = logging.getLogger()
 
+
 def make_connection(db):
     mongo_client = pymongo.MongoClient(connection_string)
     db_access = mongo_client[db]
-    return(db_access)
+    return (db_access)
+
 
 def login(user, hashedPass):
     db = make_connection("users")
@@ -53,45 +54,50 @@ def getUser(username):
         return jsonify(result)
 
 
-
 def updateUser(name, role, git_name, active_user):
     db = make_connection("users")
     result = db.authentication.find_one({"name": active_user})
     print(name)
-    if(result != None):
-        filter = {'name' : active_user}
-        newValues = { "$set": { 'name': name,'role' : role, 'git_name' : git_name } }
+    if (result != None):
+        filter = {'name': active_user}
+        newValues = {"$set": {'name': name,
+                              'role': role, 'git_name': git_name}}
         output = db.authentication.update_one(filter, newValues)
         return Response([str(output.upserted_id), str(output.acknowledged)], status=200, mimetype='application/json')
     else:
         return Response("{'error':'User does not exist'}", status=201, mimetype='application/json')
-    
+
 
 def logout(user, session_key):
     db = make_connection("users")
-    result = db.authentication.find({"name": user, "session_token": session_key})
-    if(result == []):
+    result = db.authentication.find(
+        {"name": user, "session_token": session_key})
+    if (result == []):
         return False
-    db.authentication.find_one_and_replace({"name": user, "session_token": session_key},{"session_token": None})
+    db.authentication.find_one_and_replace(
+        {"name": user, "session_token": session_key}, {"session_token": None})
     return True
+
 
 def addUser(name, role, password, git_name):
     db = make_connection("users")
     result = db.authentication.find_one({"name": name, "role": role})
-    if(result == None):
-        output = db.authentication.insert_one({"name": name, "password": password, "role": role, "git_name": git_name})
+    if (result == None):
+        output = db.authentication.insert_one(
+            {"name": name, "password": password, "role": role, "git_name": git_name})
         return Response([str(output.inserted_id), str(output.acknowledged)], status=200, mimetype='application/json')
     else:
         return Response("{'error':'User already exists'}", status=201, mimetype='application/json')
 
 
 def setupAPITokens():
+    global githubToken, GPTAPIToken
     githubToken = input("Please enter your GitHub API token: ")
     GPTAPIToken = input("Please enter your GPT API token: ")
     return githubToken, GPTAPIToken
 
 
-def queryGPT(user_query,dev_query=""):
+def queryGPT(user_query, dev_query=""):
     client = openai.OpenAI(api_key=GPTAPIToken)
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -107,31 +113,70 @@ def queryGPT(user_query,dev_query=""):
 
 
 def getDevSkills(name):
-  mongo_client = pymongo.MongoClient(connection_string)
-  db = mongo_client["db"]
-  developer = db.developerSkills.find_one({"name": name})
-  if developer:
-      # Remove the _id and name fields
-      developer.pop('_id', None)
-      developer.pop('name', None)
-      return jsonify(developer)
-  return jsonify({"error": "Developer not found"}), 404
+    mongo_client = pymongo.MongoClient(connection_string)
+    db = mongo_client["db"]
+    developer = db.developerSkills.find_one({"name": name})
+    if developer:
+        # Remove the _id and name fields
+        developer.pop('_id', None)
+        developer.pop('name', None)
+        return jsonify(developer)
+    return jsonify({"error": "Developer not found"}), 404
 
 
 def adjustSkills(name, skillsDict):
+    """Updated version that handles the Response object properly and sanitizes keys"""
     mongo_client = pymongo.MongoClient(connection_string)
     db = mongo_client["db"]
-    userCurrentSkills = getDevSkills(name)
-    filter = {'name' : name}
-    for key in skillsDict.keys():
-        if key.lower() in userCurrentSkills.keys():
-            db.developerSkills.update_one(filter, {"$set": {key.lower(): (0.8 * userCurrentSkills[key] + 0.2 * skillsDict[key])}})
-        else:
-            db.developerSkills.update_one(filter, {"$set": {key.lower(): skillsDict[key]}})
-            
-        
+
+    # Get current skills directly from database
+    current_skills_doc = db.developerSkills.find_one({"name": name})
+
+    # Sanitize keys to be MongoDB-safe (replace dots with underscores)
+    sanitized_skills = {}
+    for key, value in skillsDict.items():
+        # Replace dots and other problematic characters
+        sanitized_key = key.lower().replace('.', '_').replace('$', '_').replace('#', '_')
+        sanitized_skills[sanitized_key] = value
+
+    if not current_skills_doc:
+        # If user doesn't exist, create entry with all new skills
+        initial_data = {"name": name}
+        db.developerSkills.insert_one(initial_data)
+
+        # Insert all skills directly
+        for key, value in sanitized_skills.items():
+            db.developerSkills.update_one(
+                {"name": name},
+                {"$set": {key: value}}
+            )
+    else:
+        # User exists, update each skill with weighted average if it exists
+        filter = {'name': name}
+        for key, new_value in sanitized_skills.items():
+            # Check if skill already exists
+            if key in current_skills_doc:
+                current_value = current_skills_doc.get(key, 0)
+                # Apply weighted average: 80% old value, 20% new value
+                updated_value = 0.8 * current_value + 0.2 * new_value
+
+                db.developerSkills.update_one(
+                    filter,
+                    {"$set": {key: updated_value}}
+                )
+            else:
+                # New skill, add it directly
+                db.developerSkills.update_one(
+                    filter,
+                    {"$set": {key: new_value}}
+                )
+
+    mongo_client.close()
+    print(f"Successfully updated skills for {name}")
+
+
 def getAllRepos(username):
-  try:
+    try:
         # API endpoint for user's contributed repositories
         url = f"https://api.github.com/users/{username}/repos"
 
@@ -167,11 +212,12 @@ def getAllRepos(username):
             "total_count": len(repo_data)
         })
 
-  except Exception as e:
+    except Exception as e:
         return jsonify({
             "success": False,
             "error": str(e)
         })
+
 
 def getRepoContributorsAndBranches(owner, repo):
     query = """
@@ -206,12 +252,15 @@ def getRepoContributorsAndBranches(owner, repo):
         'Content-Type': 'application/json'
     }
 
-    response = requests.post('https://api.github.com/graphql', headers=headers, json={'query': query, 'variables': variables})
+    response = requests.post('https://api.github.com/graphql',
+                             headers=headers, json={'query': query, 'variables': variables})
 
     if response.status_code == 200:
         data = response.json()
-        contributors = data.get('data', {}).get('repository', {}).get('collaborators', {}).get('edges', [])
-        branches = data.get('data', {}).get('repository', {}).get('refs', {}).get('edges', [])
+        contributors = data.get('data', {}).get('repository', {}).get(
+            'collaborators', {}).get('edges', [])
+        branches = data.get('data', {}).get(
+            'repository', {}).get('refs', {}).get('edges', [])
 
         contributor_list = [edge['node'] for edge in contributors]
         branch_list = [edge['node']['name'] for edge in branches]
@@ -267,17 +316,20 @@ def getUserCommitsInBranch(owner, repo, branch, user_id):
         'Content-Type': 'application/json'
     }
 
-    response = requests.post('https://api.github.com/graphql', headers=headers, json={'query': query, 'variables': variables})
+    response = requests.post('https://api.github.com/graphql',
+                             headers=headers, json={'query': query, 'variables': variables})
 
     if response.status_code == 200:
         data = response.json()
-        commits = data.get('data', {}).get('repository', {}).get('ref', {}).get('target', {}).get('history', {}).get('edges', [])
+        commits = data.get('data', {}).get('repository', {}).get(
+            'ref', {}).get('target', {}).get('history', {}).get('edges', [])
         commit_list = [edge['node'] for edge in commits]
         print(json.dumps(commit_list, indent=2))
         return commit_list
     else:
         print(f"Request failed with status code {response.status_code}")
         return None
+
 
 def getCommitAdditions(owner, repo, commit_sha):
     url = f"https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}"
@@ -288,7 +340,7 @@ def getCommitAdditions(owner, repo, commit_sha):
 
     try:
         response = requests.get(url, headers=headers)
-        response.raise_for_status()  
+        response.raise_for_status()
         commit_data = response.json()
         files = commit_data.get("files", [])
 
@@ -297,7 +349,8 @@ def getCommitAdditions(owner, repo, commit_sha):
             patch = file.get("patch")
             if patch:
                 lines = patch.splitlines()
-                added_lines = [line[1:] for line in lines if line.startswith("+") and not line.startswith("+++")]
+                added_lines = [line[1:] for line in lines if line.startswith(
+                    "+") and not line.startswith("+++")]
                 file_additions[file["filename"]] = added_lines
 
         return file_additions
@@ -308,9 +361,10 @@ def getCommitAdditions(owner, repo, commit_sha):
     except KeyError as e:
         print(f"Error parsing commit data: Missing key {e}")
         return None
-    except ValueError as e: 
+    except ValueError as e:
         print(f"Error decoding JSON response: {e}")
         return None
+
 
 def getPRCommitAdditions(owner, repo, pr_number, author_username=None):
     url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/commits"
@@ -344,7 +398,8 @@ def getPRCommitAdditions(owner, repo, pr_number, author_username=None):
                 patch = file.get("patch")
                 if patch:
                     lines = patch.splitlines()
-                    added_lines = [line[1:] for line in lines if line.startswith("+") and not line.startswith("+++")]
+                    added_lines = [line[1:] for line in lines if line.startswith(
+                        "+") and not line.startswith("+++")]
                     file_additions[file["filename"]] = added_lines
             all_commit_additions.append({
                 "sha": commit_sha,
@@ -362,6 +417,7 @@ def getPRCommitAdditions(owner, repo, pr_number, author_username=None):
     except ValueError as e:
         print(f"Error decoding JSON response: {e}")
         return None
+
 
 def getPRAuthors(owner, repo, pr_number):
     url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/commits"
@@ -393,6 +449,7 @@ def getPRAuthors(owner, repo, pr_number):
         print(f"Error decoding JSON response: {e}")
         return None
 
+
 def analyzePRCommits(commitData):
     category_skill_map = {}
     dev_query = (
@@ -403,14 +460,14 @@ def analyzePRCommits(commitData):
         "where 1 is beginner and 5 is expert. "
         "Return the results in CSV format as 'category, skill_level' with no extra text or formatting."
     )
-    
+
     for commit in commitData:
         additions_text = ""
         for file, lines in commit["additions"].items():
             additions_text += f"File: {file}\n"
             for line in lines:
                 additions_text += f"+ {line}\n"
-        
+
         if additions_text:
             gpt_response = queryGPT(additions_text, dev_query)
             if gpt_response:
@@ -423,5 +480,5 @@ def analyzePRCommits(commitData):
                             category_skill_map[category] = skill_level
                         except ValueError:
                             continue
-    
+
     return category_skill_map
