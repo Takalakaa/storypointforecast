@@ -1,13 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, CardTitle, Table, Spinner, Alert } from 'reactstrap';
+import { Card, CardBody, CardTitle, Table, Spinner, Alert, Toast, ToastHeader, ToastBody } from 'reactstrap';
 
 export default function ProjectView({userName}) {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [gitName, setGitName] = useState('');
-
-
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [showToast, setShowToast] = useState(false);
+  
+  const handleAnalyze = (repoName, username) => {
+    setAnalyzing(true);
+    setShowToast(false);
+    setAnalysisResult(null);
+    
+    console.log(`Analyzing: ${repoName} for user ${username}`);
+    fetch(`http://127.0.0.1:5000/github/analyze/${encodeURIComponent(repoName)}/${encodeURIComponent(username)}`, {
+      method: 'POST',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        setAnalysisResult(data);
+        setShowToast(true);
+      })
+      .catch(err => {
+        setError(err.message || 'An error occurred during analysis');
+      })
+      .finally(() => {
+        setAnalyzing(false);
+      });
+  };
+  
   useEffect(() => {
     if (userName) {
       fetch(`http://127.0.0.1:5000/gitUserName/${userName}`)
@@ -28,8 +57,7 @@ export default function ProjectView({userName}) {
       setLoading(false);
     }
   }, [userName]);
-
-
+  
   useEffect(() => {
     if (gitName) {
       setLoading(true);
@@ -58,8 +86,7 @@ export default function ProjectView({userName}) {
           setLoading(false);
         });
     } else if (!loading && !userName) {
-
-      setLoading(false);
+       setLoading(false);
       if (!error) {
         setError('No GitHub username provided');
       }
@@ -80,15 +107,41 @@ export default function ProjectView({userName}) {
   }
 
   return (
-    <Card className="mt-4">
-      <CardBody>
-        <CardTitle tag="h3">
-          GitHub Projects for {gitName}
-        </CardTitle>
-        
-        {contributions.length === 0 ? (
-          <Alert color="info">No contributions found for this user.</Alert>
-        ) : (
+    <div>
+      {showToast && analysisResult && (
+        <div className="position-fixed top-0 right-0 p-3" style={{ zIndex: 1050, right: 0, top: 0 }}>
+          <Toast isOpen={showToast}>
+            <ToastHeader toggle={() => setShowToast(false)}>
+              Analysis Results
+            </ToastHeader>
+            <ToastBody>
+              {analysisResult.success ? (
+                <div>
+                  <p>Successfully analyzed {analysisResult.commits_analyzed} commits!</p>
+                  <strong>Skills Updated:</strong>
+                  <ul>
+                    {Object.entries(analysisResult.analysis).map(([skill, level]) => (
+                      <li key={skill}>{skill}: Level {level}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p>Analysis failed: {analysisResult.error}</p>
+              )}
+            </ToastBody>
+          </Toast>
+        </div>
+      )}
+      
+      <Card className="mt-4">
+        <CardBody>
+          <CardTitle tag="h3">
+            GitHub Projects for {gitName}
+          </CardTitle>
+          
+          {contributions.length === 0 ? (
+            <Alert color="info">No contributions found for this user.</Alert>
+          ) : (
           <Table striped responsive>
             <thead>
               <tr>
@@ -104,21 +157,27 @@ export default function ProjectView({userName}) {
                   <td>{repo.owner}</td>
                   <td>{repo.description || 'No description'}</td>
                   <td>
-                    <a 
-                      href={repo.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
                       className="btn btn-sm btn-primary"
+                      onClick={() => handleAnalyze(repo.name, gitName)}
                     >
-                      View
-                    </a>
+                      Analyze
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
         )}
-      </CardBody>
-    </Card>
+        </CardBody>
+      </Card>
+      
+      {analyzing && (
+        <div className="d-flex justify-content-center mt-3">
+          <Spinner color="primary" />
+          <span className="ml-2">Analyzing repository contributions...</span>
+        </div>
+      )}
+    </div>
   );
 }
