@@ -391,6 +391,220 @@ def analyze_repository(owner, repo, username):
             "error": str(e)
         })
 
+# Add these endpoints to your server.py file
+
+
+@app.route('/github/project/<owner>/<repo>', methods=['GET'])
+def get_project_issues(owner, repo):
+    """Get all open issues in a GitHub project for a repository"""
+    project_number = request.args.get('project_number')
+    if project_number:
+        try:
+            project_number = int(project_number)
+        except ValueError:
+            return jsonify({"success": False, "error": "Project number must be an integer"})
+
+    result = utils.getGitHubProjectIssues(owner, repo, project_number)
+    return jsonify(result)
+
+
+@app.route('/github/analyze/project/<owner>/<repo>/<username>', methods=['POST'])
+def analyze_project_performance(owner, repo, username):
+    """Analyze a user's performance based on GitHub project tickets"""
+    try:
+        # Get project number from request (optional)
+        project_number = request.json.get(
+            'project_number') if request.is_json else None
+
+        # Get all tickets assigned to the user
+        tickets_result = utils.getProjectTicketsByUser(
+            owner, repo, project_number, username)
+
+        if not tickets_result.get('success'):
+            return jsonify(tickets_result)
+
+        # Basic metrics calculation
+        total_tickets = 0
+        tickets_by_status = {}
+
+        for status, tickets in tickets_result.get('tickets', {}).items():
+            count = len(tickets)
+            total_tickets += count
+            tickets_by_status[status] = count
+
+        # Get completion rate (tasks in "Done" or similar columns)
+        completion_statuses = ["Done", "Completed", "Closed", "Finished"]
+        completed_count = sum(tickets_by_status.get(status, 0)
+                              for status in completion_statuses)
+        completion_rate = (completed_count / total_tickets *
+                           100) if total_tickets > 0 else 0
+
+        # Get the user's actual name from their git username
+        mongo_client = pymongo.MongoClient(utils.connection_string)
+        db = mongo_client["users"]
+        user_data = db.authentication.find_one({"git_name": username})
+
+        if user_data and user_data.get("name"):
+            print(f"Found user: {user_data.get('name')}")
+            # Create a skill assessment based on project performance
+            skill_analysis = {
+                "Project Management": min(5, max(1, int(completion_rate / 20))),
+                "Task Completion": min(5, max(1, int(completion_rate / 20))),
+                "Agile": 3  # Default value
+            }
+
+            # Update user skills
+            utils.adjustSkills(user_data.get("name"), skill_analysis)
+
+        return jsonify({
+            "success": True,
+            "user": username,
+            "repository": f"{owner}/{repo}",
+            "project_name": tickets_result.get('project_name'),
+            "total_tickets": total_tickets,
+            "tickets_by_status": tickets_by_status,
+            "completion_rate": round(completion_rate, 1),
+            "performance_assessment": {
+                "completion_score": min(5, max(1, int(completion_rate / 20)))
+            }
+        })
+    except Exception as e:
+        import traceback
+        print(f"Error analyzing project performance: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+
+@app.route('/calculate/adjusted-estimate', methods=['POST'])
+def calculate_adjusted_estimate():
+    """
+    Calculate adjusted estimates based on ticket skills and difficulty
+
+    Expected JSON payload:
+    {
+        "tickets": [
+            {
+                "id": "123",
+                "title": "Fix UI Dashboard",
+                "estimate": 3,
+                "skills": ["JavaScript"]
+            }
+        ],
+        "username": "optional_developer_name"  # To fetch personalized skill difficulties
+    }
+    """
+    try:
+        data = request.get_json()
+
+        if not data or not isinstance(data.get('tickets'), list):
+            return jsonify({"success": False, "error": "Invalid request format. Expected 'tickets' list."}), 400
+
+        # Get skill difficulties from database or use defaults
+        skill_difficulties = {}
+        username = data.get('username')
+
+        if username:
+            # Try to fetch user-specific skill difficulties
+            mongo_client = pymongo.MongoClient(utils.connection_string)
+            db = mongo_client["db"]
+            developer = db.developerSkills.find_one({"name": username})
+
+            if developer:
+                # Extract skill difficulties from developer document
+                for key, value in developer.items():
+                    if key != '_id' and key != 'name' and isinstance(value, (int, float)):
+                        skill_difficulties[key.lower()] = value
+
+        # Default skill difficulties if none found or no username provided
+        default_difficulties = {
+            'javascript': 3,
+            'java': 4,
+            'python': 3,
+            'react': 4,
+            'api': 3,
+            'database': 4,
+            'html': 2,
+            'css': 2
+        }
+
+        # Merge default with user-specific skills (user skills take precedence)
+        for skill, difficulty in default_difficulties.items():
+            if skill not in skill_difficulties:
+                skill_difficulties[skill] = difficulty
+
+        # Process each ticket
+        results = []
+
+        for ticket in data['tickets']:
+            # Skip tickets without estimates or skills
+            if 'estimate' not in ticket or ticket['estimate'] is None:
+                results.append({
+                    **ticket,
+                    'adjustedEstimate': None,
+                    'adjustmentFactor': None
+                })
+                continue
+
+            if not ticket.get('skills') or not isinstance(ticket['skills'], list):
+                results.append({
+                    **ticket,
+                    'adjustedEstimate': ticket['estimate'],
+                    'adjustmentFactor': 1.0
+                })
+                continue
+
+            # Calculate average skill difficulty
+            total_difficulty = 0
+            skill_count = 0
+
+            for skill in ticket['skills']:
+                skill_lower = skill.lower()
+                if skill_lower in skill_difficulties:
+                    total_difficulty += skill_difficulties[skill_lower]
+                    skill_count += 1
+
+            # Default to mid-level if no skills matched
+            avg_difficulty = total_difficulty / skill_count if skill_count > 0 else 3
+
+            # Determine multiplier based on average difficulty
+            if avg_difficulty <= 2:
+                multiplier = 0.8  # easier than expected
+            elif avg_difficulty <= 3:
+                multiplier = 1.0  # as expected
+            elif avg_difficulty <= 4:
+                multiplier = 1.2  # moderately challenging
+            else:
+                multiplier = 1.5  # highly challenging
+
+            # Calculate adjusted estimate
+            adjusted_estimate = round(ticket['estimate'] * multiplier)
+
+            # Add to results
+            results.append({
+                **ticket,
+                'adjustedEstimate': adjusted_estimate,
+                'adjustmentFactor': multiplier,
+                'avgDifficulty': avg_difficulty
+            })
+
+        return jsonify({
+            "success": True,
+            "tickets": results,
+            "skillDifficulties": skill_difficulties
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error calculating adjusted estimates: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 if __name__ == '__main__':
     init_developer_skills()

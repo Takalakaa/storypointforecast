@@ -480,3 +480,274 @@ def analyzePRCommits(commitData):
                             continue
 
     return category_skill_map
+
+
+def getGitHubProjectIssues(owner, repo, project_number=None):
+    """
+    Get open issues from a GitHub project board (v2) associated with a repository.
+    Extract estimates and skills from title hashtags.
+
+    Parameters:
+    - owner: GitHub username or organization that owns the repository
+    - repo: Name of the repository
+    - project_number: Project number (if None, will try to find the first project)
+
+    Returns:
+    - Dictionary containing project columns and their issues
+    """
+    global githubToken
+
+    print(f"Fetching GitHub project issues for {owner}/{repo}")
+    print(f"Using token of length: {len(githubToken) if githubToken else 0}")
+
+    try:
+        # First try to find projects using GraphQL (which supports both classic and v2 projects)
+        query = """
+        query getProjects($owner: String!, $name: String!) {
+          repository(owner: $owner, name: $name) {
+            projectsV2(first: 10) {
+              nodes {
+                id
+                number
+                title
+              }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "owner": owner,
+            "name": repo
+        }
+
+        headers = {
+            "Authorization": f"Bearer {githubToken}",
+            "Content-Type": "application/json"
+        }
+
+        print(f"Making GraphQL request to find projects")
+        response = requests.post('https://api.github.com/graphql',
+                                 headers=headers,
+                                 json={'query': query, 'variables': variables})
+
+        if response.status_code != 200:
+            print(
+                f"GraphQL request failed with status code {response.status_code}: {response.text}")
+            return {"success": False, "error": f"GitHub API error: {response.status_code} - {response.text}"}
+
+        data = response.json()
+        projects = data.get('data', {}).get('repository', {}).get(
+            'projectsV2', {}).get('nodes', [])
+
+        if not projects:
+            print(f"No projects found for {owner}/{repo}")
+            return {"success": False, "error": "No projects found for this repository"}
+
+        # Select the project (either by number or the first one)
+        target_project = None
+        if project_number:
+            for project in projects:
+                if project.get('number') == project_number:
+                    target_project = project
+                    break
+            if not target_project:
+                print(f"Project #{project_number} not found")
+                return {"success": False, "error": f"Project #{project_number} not found"}
+        else:
+            target_project = projects[0]
+            project_number = target_project.get('number')
+
+        project_id = target_project.get('id')
+        project_title = target_project.get('title')
+
+        print(f"Found project: {project_title} (#{project_number})")
+
+        # Now get items and their status fields
+        query = """
+        query getProjectItems($projectId: ID!) {
+          node(id: $projectId) {
+            ... on ProjectV2 {
+              items(first: 100) {
+                nodes {
+                  id
+                  fieldValues(first: 20) {
+                    nodes {
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        name
+                        field {
+                          ... on ProjectV2SingleSelectField {
+                            name
+                          }
+                        }
+                      }
+                      ... on ProjectV2ItemFieldTextValue {
+                        text
+                        field {
+                          ... on ProjectV2Field {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                  content {
+                    ... on Issue {
+                      number
+                      title
+                      state
+                      url
+                      body
+                      createdAt
+                      updatedAt
+                      assignees(first: 5) {
+                        nodes {
+                          login
+                        }
+                      }
+                      labels(first: 5) {
+                        nodes {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              fields(first: 20) {
+                nodes {
+                  ... on ProjectV2SingleSelectField {
+                    id
+                    name
+                    options {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "projectId": project_id
+        }
+
+        print(f"Making GraphQL request to get project items")
+        response = requests.post('https://api.github.com/graphql',
+                                 headers=headers,
+                                 json={'query': query, 'variables': variables})
+
+        if response.status_code != 200:
+            print(
+                f"Failed to get project items: {response.status_code} - {response.text}")
+            return {"success": False, "error": f"GitHub API error: {response.status_code} - {response.text}"}
+
+        data = response.json()
+
+        project_data = data.get('data', {}).get('node', {})
+        items_data = project_data.get('items', {}).get('nodes', [])
+        fields_data = project_data.get('fields', {}).get('nodes', [])
+
+        # Find the status field
+        status_field = None
+        for field in fields_data:
+            if field.get('name') == 'Status':
+                status_field = field
+                break
+
+        # Process items and organize by status
+        columns = {}
+
+        # Import re for regex pattern matching
+        import re
+
+        for item in items_data:
+            content = item.get('content', {})
+
+            # Skip if not an issue or if issue is closed
+            if not content or content.get('state') != 'OPEN':
+                continue
+
+            # Find status field value
+            status_value = None
+            for field_value in item.get('fieldValues', {}).get('nodes', []):
+                field = field_value.get('field', {})
+                if field and field.get('name') == 'Status':
+                    status_value = field_value.get('name')
+                    break
+
+            # If no status found, use default
+            if not status_value:
+                status_value = "No Status"
+
+            # Get the title and extract estimate and skills
+            original_title = content.get('title', '')
+            clean_title = original_title
+            estimate = None
+            skills = []
+
+            # Extract all hashtags from the title
+            hashtags = re.findall(r'#(\w+)', original_title)
+
+            # Process each hashtag
+            for tag in hashtags:
+                # If the tag is a number, it's an estimate
+                if tag.isdigit():
+                    estimate = int(tag)
+                    # Remove the estimate hashtag from the title
+                    clean_title = re.sub(r'#' + tag + r'\b', '', clean_title)
+                # Otherwise, it's a skill
+                else:
+                    skills.append(tag)
+                    # Remove the skill hashtag from the title
+                    clean_title = re.sub(r'#' + tag + r'\b', '', clean_title)
+
+            # Clean up extra spaces
+            clean_title = re.sub(r'\s+', ' ', clean_title).strip()
+
+            # For debugging
+            print(f"Original title: {original_title}")
+            print(f"Clean title: {clean_title}")
+            print(f"Estimate: {estimate}")
+            print(f"Skills: {skills}")
+
+            # Create structure for issue
+            issue_info = {
+                "number": content.get('number'),
+                "title": clean_title,
+                "original_title": original_title,
+                "url": content.get('url'),
+                "body": content.get('body'),
+                "created_at": content.get('createdAt'),
+                "updated_at": content.get('updatedAt'),
+                "estimate": estimate,
+                "skills": skills,
+                "assignees": [assignee.get('login') for assignee in content.get('assignees', {}).get('nodes', [])],
+                "labels": [label.get('name') for label in content.get('labels', {}).get('nodes', [])]
+            }
+
+            # Add to appropriate column
+            if status_value not in columns:
+                columns[status_value] = []
+
+            columns[status_value].append(issue_info)
+
+        print(
+            f"Found {sum(len(issues) for issues in columns.values())} issues across {len(columns)} status columns")
+
+        return {
+            "success": True,
+            "project_name": project_title,
+            "project_number": project_number,
+            "project_id": project_id,
+            "columns": columns
+        }
+
+    except Exception as e:
+        import traceback
+        print(f"Error getting GitHub project issues: {str(e)}")
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}

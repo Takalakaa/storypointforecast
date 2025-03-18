@@ -7,8 +7,9 @@ import MainNavbar from "../dashboard/Navbar";
 import SkillsDisplay from "./skillsDisplay.js";
 import AssessmentPage from "../assessment/AssessmentPage";
 import Dashboard from "./Dashboard.js";
-import ProfilePage from  "./Profile.js";
+import ProfilePage from "./Profile.js";
 import ProjectView from "./ProjectView.js";
+import TicketsPage from "./TicketsPage.js";
 
 const RouterComponent = () => {
   const [token, setToken] = useState(null);
@@ -27,7 +28,7 @@ const RouterComponent = () => {
     localStorage.setItem("role", role);
     localStorage.setItem("authToken", authToken);
     navigate("/");
-   
+    
   };
 
   const handleLogout = () => {
@@ -60,8 +61,8 @@ const RouterComponent = () => {
     const savedName = localStorage.getItem("name");
     const savedRole = localStorage.getItem("role");
     if (savedToken && savedName && savedRole) {
-      // Authenticate token  
-      setToken(savedToken);
+      // Authenticate token
+        setToken(savedToken);
       setUserName(savedName);
       handleRole(savedRole);
     } else if (window.location.pathname === "/signup") {
@@ -83,6 +84,9 @@ const RouterComponent = () => {
         <Route path="/assessment" element={<AssessmentPage userName={userName} />} />
         <Route path="/skills" element={<SkillsDisplay userName={userName} />} />
         <Route path="/profile" element={<ProfilePage userName={userName} />} />
+        
+        {/* Add the new route for the tickets page */}
+        <Route path="/tickets/:owner/:repo/:username" element={<TicketsPage />} />
       </Routes>
     </div>
   );

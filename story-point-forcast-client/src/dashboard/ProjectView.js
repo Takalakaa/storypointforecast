@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, CardTitle, Table, Spinner, Alert, Toast, ToastHeader, ToastBody } from 'reactstrap';
+import { Card, CardBody, CardTitle, Table, Spinner, Alert, Toast, ToastHeader, ToastBody, Button } from 'reactstrap';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProjectView({userName}) {
   const [contributions, setContributions] = useState([]);
@@ -9,33 +10,7 @@ export default function ProjectView({userName}) {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showToast, setShowToast] = useState(false);
-  
-  const handleAnalyze = (owner, repoName, username) => {
-    setAnalyzing(true);
-    setShowToast(false);
-    setAnalysisResult(null);
-    
-    console.log(`Analyzing: ${owner}/${repoName} for user ${username}`);
-    fetch(`http://127.0.0.1:5000/github/analyze/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/${encodeURIComponent(username)}`, {
-      method: 'POST',
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        setAnalysisResult(data);
-        setShowToast(true);
-      })
-      .catch(err => {
-        setError(err.message || 'An error occurred during analysis');
-      })
-      .finally(() => {
-        setAnalyzing(false);
-      });
-  };
+  const navigate = useNavigate();
   
   useEffect(() => {
     if (userName) {
@@ -93,6 +68,38 @@ export default function ProjectView({userName}) {
     }
   }, [gitName]);
 
+  const handleAnalyze = (owner, repoName, username) => {
+    setAnalyzing(true);
+    setShowToast(false);
+    setAnalysisResult(null);
+    
+    console.log(`Analyzing: ${owner}/${repoName} for user ${username}`);
+    fetch(`http://127.0.0.1:5000/github/analyze/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/${encodeURIComponent(username)}`, {
+      method: 'POST',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        setAnalysisResult(data);
+        setShowToast(true);
+      })
+      .catch(err => {
+        setError(err.message || 'An error occurred during analysis');
+      })
+      .finally(() => {
+        setAnalyzing(false);
+      });
+  };
+  
+  const handleViewTickets = (owner, repoName) => {
+    // Redirect to the tickets page with repository and user info
+    navigate(`/tickets/${owner}/${repoName}/${gitName}`);
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center mt-5">
@@ -103,8 +110,8 @@ export default function ProjectView({userName}) {
   }
 
   if (error) {
-    return <Alert color="danger">{error}</Alert>;
-  }
+     return <Alert color="danger">{error}</Alert>;
+   }
 
   return (
     <div>
@@ -142,33 +149,46 @@ export default function ProjectView({userName}) {
           {contributions.length === 0 ? (
             <Alert color="info">No contributions found for this user.</Alert>
           ) : (
-          <Table striped responsive>
-            <thead>
-              <tr>
-                <th>Repository</th>
-                <th>Owner</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contributions.map((repo, index) => (
-                <tr key={index}>
-                  <td>{repo.name}</td>
-                  <td>{repo.owner}</td>
-                  <td>{repo.description || 'No description'}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => handleAnalyze(repo.owner, repo.name, gitName)}
-                    >
-                      Analyze
-                    </button>
-                  </td>
+            <Table striped responsive>
+              <thead>
+                <tr>
+                  <th>Repository</th>
+                  <th>Owner</th>
+                  <th>Description</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+              </thead>
+              <tbody>
+                {contributions.map((repo, index) => (
+                  <tr key={index}>
+                    <td>{repo.name}</td>
+                    <td>{repo.owner}</td>
+                    <td>{repo.description || 'No description'}</td>
+                    <td>
+                      <div className="d-flex">
+                        <Button
+                          color="primary"
+                          size="sm"
+                          className="mr-2"
+                          onClick={() => handleAnalyze(repo.owner, repo.name, gitName)}
+                        >
+                          Analyze
+                        </Button>
+                        <Button
+                          color="info"
+                          size="sm"
+                          className="ml-2"
+                          onClick={() => handleViewTickets(repo.owner, repo.name)}
+                        >
+                          View Tickets
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
         </CardBody>
       </Card>
       
