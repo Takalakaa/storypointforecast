@@ -8,6 +8,7 @@ import utils
 import json
 from developer_db_setup import init_developer_skills
 from flask import Flask, jsonify
+import requests
 
 app = Flask(__name__)
 api = Api(app)
@@ -252,61 +253,108 @@ def update_skills(name):
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/github/analyze/<repo>/<username>', methods=['POST'])
-def analyze_repository(repo, username):
+@app.route('/github/analyze/<owner>/<repo>/<username>', methods=['POST'])
+def analyze_repository(owner, repo, username):
     try:
-        # For this simplified version, we'll assume the username is also the owner
-        owner = username
+        print(f"\n\n===== STARTING ANALYSIS =====")
+        print(f"Analyzing repository {owner}/{repo} for user {username}")
+        print(
+            f"GitHub token length: {len(utils.githubToken) if utils.githubToken else 0}")
 
-        # Get all PRs for the repo
-        command = f"gh pr list --repo {owner}/{repo} --state all --json number --author {username}"
-        pr_response = run_gh_command(command)
+        # Instead of using getPullRequests, we'll use the GitHub API directly here
+        url = f"https://api.github.com/repos/{owner}/{repo}/pulls?state=all&per_page=100"
+
+        headers = {
+            "Authorization": f"token {utils.githubToken}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        print(f"Fetching PRs for {owner}/{repo} by {username}...")
+        response = requests.get(url, headers=headers)
 
         all_commit_data = []
 
-        if pr_response.json.get('success'):
-            pr_data = pr_response.json.get('data', [])
-            pr_numbers = [pr['number'] for pr in pr_data]
+        if response.status_code == 200:
+            all_prs = response.json()
+            print(f"Received {len(all_prs)} PRs from API")
 
-            # For each PR, get commit data
+            # Filter by author
+            filtered_prs = [pr for pr in all_prs if pr.get(
+                'user', {}).get('login') == username]
+            print(f"Filtered to {len(filtered_prs)} PRs by author {username}")
+
+            pr_numbers = [pr['number'] for pr in filtered_prs]
+
+            print(
+                f"Found {len(pr_numbers)} PRs for {username} in {owner}/{repo}: {pr_numbers}")
+
+            # For each PR, get commit data using the existing function
             for pr_number in pr_numbers:
+                print(f"Getting commits for PR #{pr_number}...")
                 commit_data = utils.getPRCommitAdditions(
                     owner, repo, pr_number, username)
                 if commit_data:
+                    print(
+                        f"Found {len(commit_data)} commits in PR #{pr_number}")
                     all_commit_data.extend(commit_data)
+        else:
+            print(
+                f"Failed to get PRs: {response.status_code} - {response.text}")
 
         # If no PRs or commits found, try getting direct commits
         if not all_commit_data:
-            # Get repository contributors and branches
+            print(f"No commits found in PRs, trying direct commits...")
+
+            # Get repository info using existing function
             repo_info = utils.getRepoContributorsAndBranches(owner, repo)
 
             if repo_info:
+                print(f"Found repository info for {owner}/{repo}")
+
                 # Find the user's ID
                 user_id = None
-                for contributor in repo_info.get('contributors', []):
-                    if contributor.get('login') == username:
+                contributors = repo_info.get('contributors', []) or []
+                for contributor in contributors:
+                    if contributor and contributor.get('login', '').lower() == username.lower():
                         user_id = contributor.get('id')
+                        print(f"Found user ID for {username}: {user_id}")
                         break
 
                 # Get commits from the branches
-                if user_id and repo_info.get('branches'):
-                    for branch in repo_info.get('branches'):
+                branches = repo_info.get('branches', []) or []
+                if user_id and branches:
+                    print(f"Found {len(branches)} branches in {owner}/{repo}")
+                    for branch in branches:
+                        print(f"Getting commits for branch: {branch}")
                         commits = utils.getUserCommitsInBranch(
                             owner, repo, branch, user_id)
                         if commits:
+                            print(
+                                f"Found {len(commits)} commits in branch {branch}")
                             for commit in commits:
-                                commit_sha = commit.get('oid')
-                                additions = utils.getCommitAdditions(
-                                    owner, repo, commit_sha)
-                                if additions:
-                                    all_commit_data.append({
-                                        "sha": commit_sha,
-                                        "additions": additions
-                                    })
+                                if commit:  # Safe check
+                                    commit_sha = commit.get('oid')
+                                    if commit_sha:
+                                        print(
+                                            f"Getting additions for commit: {commit_sha}")
+                                        additions = utils.getCommitAdditions(
+                                            owner, repo, commit_sha)
+                                        if additions:
+                                            all_commit_data.append({
+                                                "sha": commit_sha,
+                                                "additions": additions
+                                            })
+            else:
+                print(f"Could not find repository info for {owner}/{repo}")
 
-        # Analyze the commit data
+        # If we found commits, analyze them using the existing analyzePRCommits function
         if all_commit_data:
+            print(f"Analyzing {len(all_commit_data)} commits")
+
+            # Use your existing analyzePRCommits function
             skill_analysis = utils.analyzePRCommits(all_commit_data)
+
+            print(f"Analysis results: {skill_analysis}")
 
             # Get the user's actual name from their git username
             mongo_client = pymongo.MongoClient(utils.connection_string)
@@ -314,141 +362,39 @@ def analyze_repository(repo, username):
             user_data = db.authentication.find_one({"git_name": username})
 
             if user_data and user_data.get("name"):
-                # Update skills
+                print(f"Updating skills for user: {user_data.get('name')}")
+                # Update skills using existing function
                 utils.adjustSkills(user_data.get("name"), skill_analysis)
+            else:
+                print(f"Could not find user with git_name: {username}")
 
             return jsonify({
                 "success": True,
                 "user": username,
-                "repository": repo,
+                "repository": f"{owner}/{repo}",
                 "analysis": skill_analysis,
                 "commits_analyzed": len(all_commit_data)
             })
         else:
+            print("No commits found for analysis")
             return jsonify({
                 "success": False,
                 "error": "No commits found for analysis"
             })
 
     except Exception as e:
+        import traceback
+        print(f"ERROR in analyze_repository: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e)
         })
 
 
-@app.route('/github/test-token', methods=['GET'])
-def test_github_token():
-    """Simple endpoint to test if GitHub token is valid"""
-    try:
-        import requests
-        # Try the REST API first (uses 'token' prefix)
-        headers_rest = {
-            'Authorization': f'token {utils.githubToken}',
-            'Accept': 'application/vnd.github+json'
-        }
-
-        # Get authenticated user info - simple API call
-        response = requests.get(
-            'https://api.github.com/user', headers=headers_rest)
-
-        if response.status_code == 200:
-            user_data = response.json()
-            return jsonify({
-                "success": True,
-                "message": "Token is valid for REST API",
-                "user": user_data.get('login'),
-                "token_type": "REST API (token prefix)"
-            })
-
-        # If that fails, try GraphQL API with 'bearer' prefix
-        headers_graphql = {
-            'Authorization': f'Bearer {utils.githubToken}',
-            'Content-Type': 'application/json'
-        }
-
-        query = """
-        query { 
-            viewer { 
-                login
-            }
-        }
-        """
-
-        response = requests.post(
-            'https://api.github.com/graphql',
-            headers=headers_graphql,
-            json={'query': query}
-        )
-
-        if response.status_code == 200:
-            data = response.json()
-            if 'errors' not in data:
-                return jsonify({
-                    "success": True,
-                    "message": "Token is valid for GraphQL API",
-                    "user": data.get('data', {}).get('viewer', {}).get('login'),
-                    "token_type": "GraphQL API (bearer prefix)"
-                })
-
-        # Both methods failed - show detailed error info
-        return jsonify({
-            "success": False,
-            "rest_status": response.status_code,
-            "rest_response": response.text,
-            "message": "GitHub token validation failed for both REST and GraphQL APIs",
-            "token_length": len(utils.githubToken) if utils.githubToken else 0,
-            "token_starts_with": utils.githubToken[:4] + "..." if utils.githubToken and len(utils.githubToken) > 4 else None
-        })
-
-    except Exception as e:
-        import traceback
-        return jsonify({
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        })
-
-
-@app.route('/github/cli-test', methods=['GET'])
-def test_github_cli():
-    """Test if GitHub CLI is properly authenticated"""
-    try:
-        import subprocess
-
-        # Check if gh is installed and authenticated
-        result = subprocess.run(
-            "gh auth status",
-            capture_output=True,
-            text=True,
-            shell=True
-        )
-
-        if result.returncode == 0:
-            return jsonify({
-                "success": True,
-                "message": "GitHub CLI is authenticated",
-                "details": result.stdout
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "message": "GitHub CLI authentication issue",
-                "error": result.stderr,
-                "exit_code": result.returncode
-            })
-
-    except Exception as e:
-        import traceback
-        return jsonify({
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        })
-
-
 if __name__ == '__main__':
     init_developer_skills()
     seed_data()
-    utils.setupAPITokens()
+    github_token, gpt_token = utils.setupAPITokens()
+    print(f"GitHub token length: {len(github_token) if github_token else 0}")
     app.run(debug=True)
